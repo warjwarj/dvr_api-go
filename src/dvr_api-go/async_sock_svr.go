@@ -15,7 +15,7 @@ import (
 )
 
 type AsyncSockSvr struct {
-	endpoint    string         // IP + port, 123.123.123.123:1234
+	endpoint    string         // IP + port, ex: "192.168.1.77:9047"
 	capacity    int            // num of connections
 	connHandler func(net.Conn) // set in the class we will embed this one into
 }
