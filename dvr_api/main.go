@@ -1,8 +1,15 @@
+/*
+
+TODO:
+ - add cache
+ - make the API server compatible with websockets
+ - internal dict to each server that you can use to match client identifiers to their sockets and send messages - channel to pipe the messages into the server then handle the send internally
+*/
+
 package main
 
 import (
 	"fmt"
-	"net"
 )
 
 // globals
@@ -11,28 +18,23 @@ var (
 )
 
 func main() {
-	svr := &AsyncSockSvr{
-		endpoint:    GPS_SVR_ENDPOINT,
-		capacity:    3,
-		connHandler: handleConnection,
-	}
-	err := svr.Run()
+	// create server
+	devSvr, err := NewDeviceSvr(GPS_SVR_ENDPOINT, 5, 1024, 40)
 	if err != nil {
 		fmt.Println(err)
 	}
-}
-
-func handleConnection(conn net.Conn) {
-	fmt.Println("Connection accepted...")
-	buf := make([]byte, 256)
+	// run server
+	go devSvr.Run()
+	// handle data received from devices connected to the server
 	for {
-		recvd, err := conn.Read(buf)
-		if err != nil {
-			fmt.Println(err)
-			break
-		} else {
-			msg := string(buf[:recvd])
-			fmt.Println(msg)
+		select {
+		case msg, ok := <-devSvr.svrMsgBufChan:
+			if ok {
+				// send this to a DB or cache or something
+				fmt.Println(msg)
+			} else {
+				fmt.Println("message buffer chan shouldn't be closed")
+			}
 		}
 	}
 }
