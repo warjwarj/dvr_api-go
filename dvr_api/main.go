@@ -1,9 +1,12 @@
 /*
 
 TODO:
- - add cache
- - make the API server compatible with websockets
- - internal dict to each server that you can use to match client identifiers to their sockets and send messages - channel to pipe the messages into the server then handle the send internally
+	- db: postgres
+	- main table for all messages. New one every week, month etc.
+	- column for time received on server, raw message, and any other data we want to de-normalise from the raw message packet
+	- views for each device. (Create ahead of time surely?)
+	- implement view of the data on the frontend.
+
 */
 
 package main
@@ -13,8 +16,9 @@ import (
 )
 
 // globals
-var (
+const (
 	GPS_SVR_ENDPOINT string = "192.168.1.77:9047"
+	DB_URL           string = "172.20.0.2:5432"
 )
 
 func main() {
@@ -23,18 +27,18 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	// run server
-	go devSvr.Run()
-	// handle data received from devices connected to the server
-	for {
-		select {
-		case msg, ok := <-devSvr.svrMsgBufChan:
-			if ok {
-				// send this to a DB or cache or something
-				fmt.Println(msg)
-			} else {
-				fmt.Println("message buffer chan shouldn't be closed")
-			}
-		}
+	apiSvr, err := NewAPIClientSvr(GPS_SVR_ENDPOINT, 5, 1024, 40)
+	if err != nil {
+		fmt.Println(err)
 	}
+	// run servers
+	go devSvr.Run()
+	go apiSvr.Run()
+
+	ConnectDB(DB_URL)
+
+	for {
+	}
+	// don't like the channels for receiving data
+	// each connection should
 }
