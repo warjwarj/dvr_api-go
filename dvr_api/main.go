@@ -12,17 +12,19 @@ TODO:
 package main
 
 import (
+	"context"
 	"fmt"
 )
 
 // globals
 const (
 	GPS_SVR_ENDPOINT string = "192.168.1.77:9047"
-	DB_URL           string = "172.20.0.2:5432"
+	DB_URL           string = "postgres://admin:admin@172.20.0.2:5432/message_store"
 )
 
 func main() {
-	// create server
+
+	// create server structs
 	devSvr, err := NewDeviceSvr(GPS_SVR_ENDPOINT, 5, 1024, 40)
 	if err != nil {
 		fmt.Println(err)
@@ -31,14 +33,30 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	// run servers
+
+	// start listening
 	go devSvr.Run()
 	go apiSvr.Run()
 
-	ConnectDB(DB_URL)
-
-	for {
+	// create and lightly test DB connection
+	dbConn, err := NewDBConn(DB_URL, context.Background())
+	err = dbConn.conn.Ping(context.Background())
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-	// don't like the channels for receiving data
-	// each connection should
+
+	// test db structure
+	err = dbConn.ValidateDBStructure()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// store in db (hangs)
+	err = dbConn.PipeMessagesToDB(devSvr.svrMsgBufChan, apiSvr.svrMsgBufChan)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

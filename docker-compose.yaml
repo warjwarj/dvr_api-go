@@ -1,6 +1,5 @@
 services:
-  # 
-  message-store:
+  postgres:
     image: postgres
     restart: always
     environment:
