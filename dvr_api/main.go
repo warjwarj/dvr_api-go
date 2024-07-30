@@ -12,24 +12,24 @@ TODO:
 package main
 
 import (
-	"context"
 	"fmt"
 )
 
 // globals
 const (
-	GPS_SVR_ENDPOINT string = "192.168.1.77:9047"
-	DB_URL           string = "postgres://admin:admin@172.20.0.2:5432/message_store"
+	DEVICE_SVR_ENDPOINT string = "192.168.1.77:9047"
+	API_SVR_ENDPOINT    string = "192.168.1.77:9046"
+	DB_URL              string = "postgresql://admin:admin@172.19.0.3:5432/message_store"
 )
 
 func main() {
 
 	// create server structs
-	devSvr, err := NewDeviceSvr(GPS_SVR_ENDPOINT, 5, 1024, 40)
+	devSvr, err := NewDeviceSvr(DEVICE_SVR_ENDPOINT, 5, 1024, 40)
 	if err != nil {
 		fmt.Println(err)
 	}
-	apiSvr, err := NewAPIClientSvr(GPS_SVR_ENDPOINT, 5, 1024, 40)
+	apiSvr, err := NewAPIClientSvr(API_SVR_ENDPOINT, 5, 1024, 40)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -38,25 +38,48 @@ func main() {
 	go devSvr.Run()
 	go apiSvr.Run()
 
-	// create and lightly test DB connection
-	dbConn, err := NewDBConn(DB_URL, context.Background())
-	err = dbConn.conn.Ping(context.Background())
-	if err != nil {
-		fmt.Println(err)
-		return
+	// handle messages
+	for i := 0; ; i++ {
+		select {
+		case msgWrap, ok := <-devSvr.svrMsgBufChan:
+			if ok {
+				fmt.Printf("Received,|%q| from |%q|\n", *msgWrap.message, *msgWrap.id)
+			} else {
+				fmt.Errorf("Couldn't receive value from devMsgChan")
+			}
+		case msgWrap, ok := <-apiSvr.svrMsgBufChan:
+			if ok {
+				fmt.Printf("Received,|%q| from |%q|\n", *msgWrap.message, *msgWrap.id)
+			} else {
+				fmt.Errorf("Couldn't receive value from apiMsgChan")
+			}
+		}
 	}
 
-	// test db structure
-	err = dbConn.ValidateDBStructure()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	// // create DB connection
+	// dbConn, err := NewDBConn(DB_URL, context.Background())
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	// // TEST connection
+	// err = dbConn.conn.Ping(context.Background())
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
-	// store in db (hangs)
-	err = dbConn.PipeMessagesToDB(devSvr.svrMsgBufChan, apiSvr.svrMsgBufChan)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	// // TEST db structure
+	// err = dbConn.ValidateDBStructure()
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
+	// // store messages in db (hangs)
+	// err = dbConn.PipeMessagesToDB(devSvr.svrMsgBufChan, apiSvr.svrMsgBufChan)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 }

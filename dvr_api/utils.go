@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -57,4 +60,22 @@ func (s *Stack[T]) IsEmpty() bool {
 // Size returns the number of items in the stack.
 func (s *Stack[T]) Size() int {
 	return len(s.items)
+}
+
+// could probably improve this
+func getIdFromMessage(message *string, id *string) error {
+	msgSlice := strings.Split(*message, ";")
+	for _, v := range msgSlice {
+		_, err := strconv.Atoi(v)
+		if err == nil {
+			*id = v
+			return nil
+		}
+	}
+	return fmt.Errorf("couldn't extract id from: %v", message)
+}
+
+type Message struct {
+	message *string
+	id      *string
 }

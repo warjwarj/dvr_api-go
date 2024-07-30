@@ -11,7 +11,7 @@ type APIClientSvr struct {
 	sockOpBufSize  int            // how much memory do we give each connection to perform send/recv operations
 	sockOpBufStack Stack[*[]byte] // memory region we give each conn to so send/recv
 	svrMsgBufSize  int            // how many messages can we queue on the server at once
-	svrMsgBufChan  chan string    // the channel we use to queue the messages
+	svrMsgBufChan  chan Message   // the channel we use to queue the messages
 }
 
 func NewAPIClientSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*APIClientSvr, error) {
@@ -21,7 +21,7 @@ func NewAPIClientSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize i
 		bufSize,
 		Stack[*[]byte]{},
 		svrMsgBufSize,
-		make(chan string, svrMsgBufSize)}
+		make(chan Message)}
 	// init the stack we use to store the buffers
 	svr.sockOpBufStack.Init(capacity)
 	// create and store the buffers
@@ -43,11 +43,11 @@ func (s *APIClientSvr) Init() error {
 
 // run the server
 func (s *APIClientSvr) Run() error {
-	ln, err := net.Listen("tcp", GPS_SVR_ENDPOINT)
+	ln, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
 		return err
 	} else {
-		fmt.Println("Server listening on ", GPS_SVR_ENDPOINT, "...")
+		fmt.Println("Server listening on ", s.endpoint, "...")
 	}
 	for {
 		conn, err := ln.Accept()
@@ -66,14 +66,25 @@ func (s *APIClientSvr) connHandler(conn net.Conn) {
 		fmt.Println(err)
 	}
 	// connection loop
+	var msg string
+	var id string
 	for {
 		recvd, err := conn.Read(*buf)
 		if err != nil {
 			fmt.Println("Connection closed")
-			break
+			return
 		} else {
-			msg := string((*buf)[:recvd])
-			s.svrMsgBufChan <- msg
+			// delimit messages with the carrige return
+			msg = string((*buf)[:recvd])
+			if (*buf)[len((*buf))-1] == '\r' {
+				if id == "" {
+					err = getIdFromMessage(&msg, &id)
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+				s.svrMsgBufChan <- Message{&msg, &id}
+			}
 		}
 	}
 }
