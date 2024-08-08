@@ -115,3 +115,29 @@ func TestSize(t *testing.T) {
 		t.Errorf("Expected stack size 3, but got %d", stack.Size())
 	}
 }
+
+// Test adding and retrieving values
+func TestDictionary_AddAndGet(t *testing.T) {
+	dict := &Dictionary[string]{}
+	dict.Init()
+
+	dict.Add("name", "John")
+	dict.Delete("name")
+
+	if _, exists := dict.Get("name"); exists {
+		t.Error("Expected 'name' to be deleted")
+	}
+}
+
+// Test deleting values
+func TestDictionary_Delete(t *testing.T) {
+	dict := Dictionary[string]{}
+	dict.Init()
+
+	dict.Add("name", "John")
+	dict.Delete("name")
+
+	if _, exists := dict.Get("name"); exists {
+		t.Error("Expected 'name' to be deleted")
+	}
+}

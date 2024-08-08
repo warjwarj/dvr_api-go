@@ -17,7 +17,7 @@ type Stack[T any] struct {
 	lock  sync.Mutex
 }
 
-func (s *Stack[T]) Init(startSize int) {
+func (s *Stack[T]) Init() {
 	s.items = make([]T, 0)
 }
 
@@ -62,7 +62,39 @@ func (s *Stack[T]) Size() int {
 	return len(s.items)
 }
 
-// could probably improve this
+// Define a dictionary type
+type Dictionary[T any] struct {
+	internal map[string]*T
+	lock     sync.Mutex
+}
+
+func (d *Dictionary[T]) Init() {
+	d.internal = make(map[string]*T)
+}
+
+// Function to add a key-value pair to the dictionary
+func (d *Dictionary[T]) Add(key string, value T) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.internal[key] = &value
+}
+
+// Function to get a value from the dictionary by key
+func (d *Dictionary[T]) Get(key string) (*T, bool) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	value, exists := d.internal[key]
+	return value, exists
+}
+
+// Function to delete a key-value pair from the dictionary
+func (d *Dictionary[T]) Delete(key string) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	delete(d.internal, key)
+}
+
+// get id from msg format: IDENTIFIER;1234;<-That's the id;xXxXxXxXxX;<CR>
 func getIdFromMessage(message *string, id *string) error {
 	msgSlice := strings.Split(*message, ";")
 	for _, v := range msgSlice {
@@ -73,9 +105,4 @@ func getIdFromMessage(message *string, id *string) error {
 		}
 	}
 	return fmt.Errorf("couldn't extract id from: %v", message)
-}
-
-type Message struct {
-	message *string
-	id      *string
 }

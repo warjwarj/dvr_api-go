@@ -1,25 +1,20 @@
 /*
 
 TODO:
-	- db: postgres
-	- main table for all messages. New one every week, month etc.
-	- column for time received on server, raw message, and any other data we want to de-normalise from the raw message packet
-	- views for each device. (Create ahead of time surely?)
-	- implement view of the data on the frontend.
+
+ - do the db
 
 */
 
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
-// globals
+// globs
 const (
-	DEVICE_SVR_ENDPOINT string = "192.168.1.77:9047"
-	API_SVR_ENDPOINT    string = "192.168.1.77:9046"
-	DB_URL              string = "postgresql://admin:admin@172.19.0.3:5432/message_store"
+	DEVICE_SVR_ENDPOINT string = "192.168.1.77:9047"        // endpoint for dev svr
+	API_SVR_ENDPOINT    string = "127.0.0.1:9046"           // endpoint for api websock svr
+	MONGODB_ENDPOINT    string = "mongodb://0.0.0.0:27017/" // database uri
 )
 
 func main() {
@@ -27,59 +22,24 @@ func main() {
 	// create server structs
 	devSvr, err := NewDeviceSvr(DEVICE_SVR_ENDPOINT, 5, 1024, 40)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error creating device server: ", err)
 	}
 	apiSvr, err := NewAPIClientSvr(API_SVR_ENDPOINT, 5, 1024, 40)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error creating api server: ", err)
 	}
 
-	// start listening
+	// create DB connection
+	dbc, err := NewDBConnection(MONGODB_ENDPOINT)
+	if err != nil {
+		fmt.Println("Error creating database connection: ", err)
+	}
+
+	// start the servers listening
 	go devSvr.Run()
 	go apiSvr.Run()
 
-	// handle messages
-	for i := 0; ; i++ {
-		select {
-		case msgWrap, ok := <-devSvr.svrMsgBufChan:
-			if ok {
-				fmt.Printf("Received,|%q| from |%q|\n", *msgWrap.message, *msgWrap.id)
-			} else {
-				fmt.Errorf("Couldn't receive value from devMsgChan")
-			}
-		case msgWrap, ok := <-apiSvr.svrMsgBufChan:
-			if ok {
-				fmt.Printf("Received,|%q| from |%q|\n", *msgWrap.message, *msgWrap.id)
-			} else {
-				fmt.Errorf("Couldn't receive value from apiMsgChan")
-			}
-		}
-	}
+	relay := Relay{devices: devSvr, clients: apiSvr, dbc: dbc}
+	relay.IntakeMessages()
 
-	// // create DB connection
-	// dbConn, err := NewDBConn(DB_URL, context.Background())
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// // TEST connection
-	// err = dbConn.conn.Ping(context.Background())
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	// // TEST db structure
-	// err = dbConn.ValidateDBStructure()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	// // store messages in db (hangs)
-	// err = dbConn.PipeMessagesToDB(devSvr.svrMsgBufChan, apiSvr.svrMsgBufChan)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
 }
