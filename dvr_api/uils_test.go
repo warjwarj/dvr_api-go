@@ -30,6 +30,10 @@ func TestPop(t *testing.T) {
 	if stack.Size() != 2 {
 		t.Errorf("Expected stack size 2, but got %d", stack.Size())
 	}
+
+	item, err = stack.Pop()
+	item, err = stack.Pop()
+	item, err = stack.Pop()
 }
 
 func TestPeek(t *testing.T) {

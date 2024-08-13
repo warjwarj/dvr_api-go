@@ -7,10 +7,12 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"nhooyr.io/websocket"
 )
 
-type APIClientSvr struct {
+type WebSockSvr struct {
+	logger         *zap.SugaredLogger
 	endpoint       string                     // IP + port, ex: "192.168.1.77:9047"
 	capacity       int                        // num of connections
 	sockOpBufSize  int                        // how much memory do we give each connection to perform send/recv operations
@@ -20,9 +22,10 @@ type APIClientSvr struct {
 	connIndex      Dictionary[websocket.Conn] // index the connection objects against the ids of the clients represented thusly
 }
 
-func NewAPIClientSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*APIClientSvr, error) {
+func NewWebSockSvr(logger *zap.SugaredLogger, endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*WebSockSvr, error) {
 	// create the struct
-	svr := APIClientSvr{
+	svr := WebSockSvr{
+		logger,
 		endpoint,
 		capacity,
 		bufSize,
@@ -30,9 +33,11 @@ func NewAPIClientSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize i
 		svrMsgBufSize,
 		make(chan Message),
 		Dictionary[websocket.Conn]{}}
+
 	// init things that need initing
 	svr.sockOpBufStack.Init()
 	svr.connIndex.Init()
+
 	// create and store the buffers
 	for i := 0; i < svr.capacity; i++ {
 		buf := make([]byte, svr.sockOpBufSize)
@@ -42,7 +47,7 @@ func NewAPIClientSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize i
 }
 
 // create and store our buffers
-func (s *APIClientSvr) Init() error {
+func (s *WebSockSvr) Init() error {
 	for i := 0; i < s.capacity; i++ {
 		buf := make([]byte, s.sockOpBufSize)
 		s.sockOpBufStack.Push(&buf)
@@ -51,43 +56,55 @@ func (s *APIClientSvr) Init() error {
 }
 
 // run the server
-func (acs *APIClientSvr) Run() {
-	l, err := net.Listen("tcp", acs.endpoint)
+func (s *WebSockSvr) Run() {
+	// listen tcp
+	l, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Fatalf("error listening on %v: %v", s.endpoint, err)
+	} else {
+		s.logger.Infof("websocket server listening on: %v", s.endpoint)
 	}
+
+	// accept http on the port open for tcp above
 	httpSvr := &http.Server{
-		Handler: acs,
+		Handler: s,
 	}
-	errc := make(chan error, 1)
-	go func() {
-		errc <- httpSvr.Serve(l)
-	}()
-	fmt.Printf("Websocket server listening on: %v\n", acs.endpoint)
+	err = httpSvr.Serve(l)
+	if err != nil {
+		s.logger.Fatalf("error serving websocket server: %v", err)
+	}
 }
 
-func (s *APIClientSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// func called for each connection to handle the websocket connection request, calls and blocks on connHandler
+func (s *WebSockSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	// accept wenbsocket connection
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		Subprotocols:       []string{"dvr_api"},
 		OriginPatterns:     []string{"*"}, // Accept all origins for simplicity; customize as needed
 		InsecureSkipVerify: true,          // Not recommended for production, remove this line in a real application
 	})
-	fmt.Println("Connection accepted...")
+
+	// handle err
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Infof("error accepting websocket connection: %v", err)
 		return
 	}
+	s.logger.Debug("connection accepted on api svr...")
+
+	// don't really need this but why not
 	if c.Subprotocol() != "dvr_api" {
+		s.logger.Debug("declined connection because subprotocol != dvr_api")
 		c.Close(websocket.StatusPolicyViolation, "client must speak the dvr_api subprotocol")
 		return
 	}
-	go func() {
-		err := s.connHandler(c)
-		if err != nil {
-			fmt.Println("connection handler error:", err)
-		}
-		c.CloseNow()
-	}()
+
+	// handle connection
+	err = s.connHandler(c)
+	if err != nil {
+		s.logger.Errorf("error in connection handler func: %v", err)
+	}
+	c.CloseNow()
 }
 
 /*
@@ -102,7 +119,7 @@ func (s *APIClientSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
  */
 
 // handle each connection
-func (s *APIClientSvr) connHandler(conn *websocket.Conn) error {
+func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 
 	// msg = reusable holder for string, gen id as an arbitrary number
 	var msg string
@@ -117,13 +134,19 @@ func (s *APIClientSvr) connHandler(conn *websocket.Conn) error {
 		// read one websocket message frame
 		wsMsgType, buf, err := conn.Read(context.Background())
 
-		// handle errors
+		// if the above read operation errors then conn is closed.
 		if err != nil {
-			return fmt.Errorf("Connection closed: %v\n", err)
+			// don't realistically need to know why but might be useful for debug.
+			s.logger.Debugf("websocket connection closed, status: %v", websocket.CloseStatus(err).String())
+			return nil
 		}
+
+		// message should only be text
 		if wsMsgType != websocket.MessageText {
 			return fmt.Errorf("received non-text websocket message - closing conn")
 		}
+
+		// build message with the new data sent
 		msg += string(buf)
 
 		// check if it is a whole message
@@ -131,7 +154,7 @@ func (s *APIClientSvr) connHandler(conn *websocket.Conn) error {
 			continue
 		}
 
-		// Queue message for processsing
+		// send message to relay and reset for next message
 		s.svrMsgBufChan <- Message{msg, &id}
 		msg = ""
 	}

@@ -5,53 +5,67 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/zap"
 	"nhooyr.io/websocket"
 )
 
+// record and index connected devices and clients
+type Relay struct {
+	logger  *zap.SugaredLogger
+	devices *DeviceSvr    // dev svr
+	clients *WebSockSvr   // api svr
+	dbc     *DBConnection // mongodb database connection
+	lock    sync.Mutex    // might be uneccessary
+}
+
+// constructor
+func NewRelay(logger *zap.SugaredLogger, devices *DeviceSvr, clients *WebSockSvr, dbc *DBConnection) (*Relay, error) {
+	return &Relay{
+		logger:  logger,
+		devices: devices,
+		clients: clients,
+		dbc:     dbc,
+	}, nil
+}
+
+// might be able to get rid of this
 type Message struct {
 	message string  // text the tcp client sent
 	id      *string // index which the message sender with in the connIndex of the server
 }
 
-// record and index connected devices and clients
-type Relay struct {
-	devices *DeviceSvr    // dev svr
-	clients *APIClientSvr // api svr
-	dbc     *DBConnection // mongodb database connection
-	lock    sync.Mutex    // might be uneccessary
-}
-
 // take messages from servers, handle, first step
-func (rl *Relay) IntakeMessages() {
+func (rl *Relay) IntakeMessages() error {
 	// handle messages, main program loop
 	for i := 0; ; i++ {
 		select {
 		// process one message received from the device server
 		case msgWrap, ok := <-rl.devices.svrMsgBufChan:
 			if ok {
-				fmt.Printf("Received |%q| from |%q|\n", msgWrap.message, *msgWrap.id)
+				rl.logger.Infof("Received |%q| from |%q|", msgWrap.message, *msgWrap.id)
 				err := rl.ProcessMsg_Device(&msgWrap)
 				if err != nil {
-					fmt.Println(err)
+					rl.logger.Errorf("error processing message from device: %v", err)
 				}
 			} else {
-				fmt.Errorf("Couldn't receive value from devMsgChan")
+				rl.logger.Error("Couldn't receive value from devMsgChan")
 			}
 		// process one message received from the API server
 		case msgWrap, ok := <-rl.clients.svrMsgBufChan:
 			if ok {
-				fmt.Printf("Received |%q| from |%q|\n", msgWrap.message, *msgWrap.id)
+				rl.logger.Infof("Received |%q| from |%q|", msgWrap.message, *msgWrap.id)
 				err := rl.ProcessMsg_APIClient(&msgWrap)
 				if err != nil {
-					fmt.Println(err)
+					rl.logger.Errorf("error processing message from api client: %v", err)
 				}
 			} else {
-				fmt.Errorf("Couldn't receive value from apiMsgChan")
+				rl.logger.Error("Couldn't receive value from apiMsgChan")
 			}
 		}
 	}
 }
 
+// handle one message from an api client
 func (rl *Relay) ProcessMsg_APIClient(msgWrap *Message) error {
 
 	// verify api client connection, get the connection object
@@ -93,17 +107,18 @@ func (rl *Relay) ProcessMsg_APIClient(msgWrap *Message) error {
 	return nil
 }
 
-// simple conpared to the above, all we want to do is record the message in the database
+// record the message in the database
 func (rl *Relay) ProcessMsg_Device(msgWrap *Message) error {
 
 	// call the insert function
-	updateResult, err := rl.dbc.RecordMessage_FromDevice(msgWrap)
+	// updateResult, err := rl.dbc.RecordMessage_FromDevice(msgWrap)
+	_, err := rl.dbc.RecordMessage_FromDevice(msgWrap)
 	if err != nil {
 		return fmt.Errorf("error recording message in db: %v", err)
 	}
 
 	// multi-faceted result, print for debug
-	fmt.Println(updateResult) // MatchedCount, ModifiedCount, UpsertedCount
+	//rl.logger.Debug(updateResult) // MatchedCount, ModifiedCount, UpsertedCount
 
 	// no err
 	return nil

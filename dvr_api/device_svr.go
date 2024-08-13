@@ -1,11 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"net"
+
+	"go.uber.org/zap"
 )
 
 type DeviceSvr struct {
+	logger         *zap.SugaredLogger
 	endpoint       string               // IP + port, ex: "192.168.1.77:9047"
 	capacity       int                  // num of connections
 	sockOpBufSize  int                  // how much memory do we give each connection to perform send/recv operations
@@ -15,8 +18,10 @@ type DeviceSvr struct {
 	connIndex      Dictionary[net.Conn] // index the connection objects against the ids of the devices represented thusly
 }
 
-func NewDeviceSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*DeviceSvr, error) {
+func NewDeviceSvr(logger *zap.SugaredLogger, endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*DeviceSvr, error) {
+	// holder struct
 	svr := DeviceSvr{
+		logger,
 		endpoint,
 		capacity,
 		bufSize,
@@ -24,16 +29,18 @@ func NewDeviceSvr(endpoint string, capacity int, bufSize int, svrMsgBufSize int)
 		svrMsgBufSize,
 		make(chan Message),
 		Dictionary[net.Conn]{}}
+
 	// init the stack we use to store the buffers
 	svr.sockOpBufStack.Init()
+
 	// init the Dictionary
 	svr.connIndex.Init()
+
 	// create and store the buffers
 	for i := 0; i < svr.capacity; i++ {
 		buf := make([]byte, svr.sockOpBufSize)
 		svr.sockOpBufStack.Push(&buf)
 	}
-
 	return &svr, nil
 }
 
@@ -46,23 +53,25 @@ func (s *DeviceSvr) Init() error {
 	return nil
 }
 
-// run the server
+// run the server, blocking
 func (s *DeviceSvr) Run() {
 	ln, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Fatalf("error listening on %v: %v", s.endpoint, err)
 	} else {
-		fmt.Println("Server listening on ", s.endpoint, "...")
+		s.logger.Infof("device server listening on: %v", s.endpoint)
 	}
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err)
+			s.logger.Infof("error accepting websocket connection: %v", err)
+			continue
 		}
+		s.logger.Debug("connection accepted on device svr...")
 		go func() {
 			err := s.connHandler(c)
 			if err != nil {
-				fmt.Println(err)
+				s.logger.Errorf("error in device connection loop: %v", err)
 			}
 			c.Close()
 		}()
@@ -71,46 +80,55 @@ func (s *DeviceSvr) Run() {
 
 // handle each connection
 func (s *DeviceSvr) connHandler(conn net.Conn) error {
-	fmt.Println("Connection accepted...")
+
+	// get buffer for read operations
 	buf, err := s.sockOpBufStack.Pop()
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error("error retreiving buffer from stack: %v", err)
 	}
-	// connection loop
+
+	// loop variables
 	var msg string = ""
 	var id string = ""
 	var recvd int = 0
+
+	// connection loop
 	for {
 		// read from wherever we finished last time
 		tmp, err := conn.Read((*buf)[recvd:])
 		recvd += tmp
+
+		// if error is just disconnection then return nil else return the error
 		if err != nil {
-			fmt.Println("Connection closed")
+			s.logger.Debug("connection closed on device svr...")
 			s.sockOpBufStack.Push(buf)
-			if id != "" {
-				fmt.Println(s.connIndex)
+			if err == io.EOF {
+				return nil
 			}
 			return err
 		}
+
 		// check if we've recvd complete message.
 		if (*buf)[recvd-1] != '\r' {
-			fmt.Println((*buf)[recvd])
 			continue
 		}
+
 		// get complete message, reset byte counter
 		msg = string((*buf)[:recvd])
 		recvd = 0
-		// set id if needed
+
+		// set id if not already set
 		if id == "" {
 			err = getIdFromMessage(&msg, &id)
 			if err != nil {
-				fmt.Println(err)
+				s.logger.Debugf("")
 				continue
 			}
 			s.connIndex.Add(id, conn)
 			defer s.connIndex.Delete(id)
-			fmt.Println(s.connIndex)
 		}
+
+		// send the messages to the relay
 		s.svrMsgBufChan <- Message{msg, &id}
 	}
 }

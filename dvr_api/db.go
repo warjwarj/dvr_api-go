@@ -8,10 +8,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 )
 
 // connection to the mongodb instance
 type DBConnection struct {
+	logger     *zap.SugaredLogger
 	client     *mongo.Client // connection to the db
 	uri        string        // endpoint
 	db         string        // name of the database inside mongo
@@ -20,7 +22,7 @@ type DBConnection struct {
 }
 
 // constructor
-func NewDBConnection(uri string) (*DBConnection, error) {
+func NewDBConnection(logger *zap.SugaredLogger, uri string) (*DBConnection, error) {
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
@@ -32,6 +34,7 @@ func NewDBConnection(uri string) (*DBConnection, error) {
 		return nil, err
 	}
 	return &DBConnection{
+		logger:     logger,
 		client:     client,
 		uri:        uri,
 		db:         "dvr_api-GPS_DB",
@@ -41,23 +44,25 @@ func NewDBConnection(uri string) (*DBConnection, error) {
 
 // Device schema for modelling in mongodb
 type Device_Schema struct {
-	devId      string                 `bson:"devId"`
-	msgHistory []DeviceMessage_Schema `bson:"msgHistory"`
+	DeviceId   string                 `bson:"device_id"`
+	MsgHistory []DeviceMessage_Schema `bson:"msg_history"`
 }
 
 // Device message schema for modelling in mongodb
 type DeviceMessage_Schema struct {
-	recvdTime time.Time `bson:"timestamp"`
-	message   string    `bson:"message"`
+	RecvdTime  time.Time `bson:"received_time"`
+	PacketTime time.Time `bson:"packet_time"`
+	Message    string    `bson:"message"`
 }
 
+// insert a record into the database
 func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateResult, error) {
 
 	// timeout, threadsafety
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	dbc.lock.Lock()
 
-	// cancel context and release lock on database connection
+	// cancel context and release lock on database connection when func exits
 	defer func() {
 		cancel()
 		dbc.lock.Unlock()
@@ -66,17 +71,24 @@ func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateRe
 	// might be worth storing this to avoid redeclaration upon each function call
 	coll := dbc.client.Database(dbc.db).Collection(dbc.deviceColl)
 
+	// parse the time in the packet
+	packetTime, err := getDateFromMessage(msg.message)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create a new message
 	newMessage := DeviceMessage_Schema{
-		recvdTime: time.Now(),
-		message:   msg.message,
+		RecvdTime:  time.Now(),
+		PacketTime: packetTime,
+		Message:    msg.message,
 	}
 
 	// Update the document for the device, adding the new message to the messages array
-	filter := bson.M{"devId": msg.id}
+	filter := bson.M{"DeviceId": msg.id}
 	update := bson.M{
 		"$push": bson.M{
-			"msgHistory": newMessage,
+			"MsgHistory": newMessage,
 		},
 	}
 
@@ -89,3 +101,7 @@ func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateRe
 	// return results of update/insertion
 	return updateResult, nil
 }
+
+// func (dbc *DBConnection) QueryMsgHistory(devices []string, after string, before string) (*bson.M, error) {
+
+// }
