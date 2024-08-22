@@ -31,9 +31,9 @@ func (s *httpSvr) Run() {
 	// listen tcp
 	l, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		s.logger.Fatal("error listening on %v: %v", zap.String("endpoint", s.endpoint), zap.Error(err))
+		s.logger.Fatal("error listening on %v: %v", zap.String("s.endpoint", s.endpoint), zap.Error(err))
 	} else {
-		s.logger.Info("http server listening on: %v", zap.String("endpoint", s.endpoint))
+		s.logger.Info("http server listening on: %v", zap.String("s.endpoint", s.endpoint))
 	}
 
 	// accept http on tcp port we've just ran
@@ -66,7 +66,7 @@ func (s *httpSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req API_Request
 	err = json.Unmarshal(body, &req)
 	if err != nil {
-		s.logger.Warn("failed to unmarshal json: \n%v", zap.String("incorrectJson", string(body)))
+		s.logger.Warn("failed to unmarshal json: \n%v", zap.String("body", string(body)))
 	}
 
 	// query the database

@@ -96,7 +96,7 @@ func (sh *SubscriptionHandler) Publish(msgWrap *Message) error {
 		err := conn.Write(context.TODO(), websocket.MessageText, []byte(msgWrap.message))
 		if err != nil {
 			delete(sh.subscriptions[*msgWrap.clientId], k)
-			sh.logger.Debug("removed subscriber %v from subscription list because a write operation failed", zap.String("clientId", k))
+			sh.logger.Debug("removed subscriber %v from subscription list because a write operation failed", zap.String("k", k))
 			continue
 		}
 	}

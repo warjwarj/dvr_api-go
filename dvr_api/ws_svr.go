@@ -62,9 +62,9 @@ func (s *WebSockSvr) Run() {
 	// listen tcp
 	l, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		s.logger.Fatal("error listening on %v: %v", zap.String("endpoint", s.endpoint), zap.Error(err))
+		s.logger.Fatal("error listening on %v: %v", zap.String("s.endpoint", s.endpoint), zap.Error(err))
 	} else {
-		s.logger.Info("websocket server listening on: %v", zap.String("endpoint", s.endpoint))
+		s.logger.Info("websocket server listening on: %v", zap.String("s.endpoint", s.endpoint))
 	}
 
 	// accept http on the port open for tcp above
@@ -138,7 +138,7 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 		err := wsjson.Read(context.Background(), conn, &msg)
 		if err != nil {
 			// don't realistically need to know why but might be useful for debug.
-			s.logger.Debug("websocket connection closed, status: %v", zap.String("wsCloseStatus", websocket.CloseStatus(err).String()))
+			s.logger.Debug("websocket connection closed, status: %v", zap.String("websocket.CloseStatus(err)", websocket.CloseStatus(err).String()))
 			return nil
 		}
 

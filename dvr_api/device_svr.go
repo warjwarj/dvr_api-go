@@ -57,9 +57,9 @@ func (s *DeviceSvr) Init() error {
 func (s *DeviceSvr) Run() {
 	ln, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		s.logger.Fatal("error listening on %v: %v", zap.String("endpoint", s.endpoint), zap.Error(err))
+		s.logger.Fatal("error listening on %v: %v", zap.String("s.endpoint", s.endpoint), zap.Error(err))
 	} else {
-		s.logger.Info("device server listening on: %v", zap.String("endpoint", s.endpoint))
+		s.logger.Info("device server listening on: %v", zap.String("s.endpoint", s.endpoint))
 	}
 	for {
 		c, err := ln.Accept()
