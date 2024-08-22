@@ -9,6 +9,8 @@ TODO:
 package main
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 )
 
@@ -31,38 +33,45 @@ const (
 
 func main() {
 	// set up our logger
-	var logger *zap.SugaredLogger
+	var logger *zap.Logger
 	if PROD {
-		tmp, _ := zap.NewProduction()
-		logger = tmp.Sugar()
+		tmp, err := zap.NewProduction()
+		if err != nil {
+			fmt.Println("error initing logger: ", err)
+		}
+		logger = tmp
 	} else {
-		tmp, _ := zap.NewDevelopment()
-		logger = tmp.Sugar()
+		tmp, err := zap.NewDevelopment()
+		if err != nil {
+			fmt.Println("error initing logger: ", err)
+		}
+		logger = tmp
 	}
+	defer logger.Sync() // flushes buffer, if any
 	defer logger.Sync() // flushes buffer, if any
 
 	// create DB connection
-	dbc, err := NewDBConnection(logger, MONGODB_ENDPOINT)
+	dbc, err := NewDBConnection(logger, MONGODB_ENDPOINT, "dvr_api-GPS-DB")
 	if err != nil {
-		logger.Fatalf("fatal error creating database connection: %v", err)
+		logger.Fatal("fatal error creating database connection: %v", zap.Error(err))
 	}
 
 	// create device server struct
 	devSvr, err := NewDeviceSvr(logger, DEVICE_SVR_ENDPOINT, CAPACITY, BUF_SIZE, SVR_MSGBUF_SIZE)
 	if err != nil {
-		logger.Fatalf("fatal error creating device server: %v", err)
+		logger.Fatal("fatal error creating device server: %v", zap.Error(err))
 	}
 
 	// create ws server struct
 	wsSvr, err := NewWebSockSvr(logger, WEBSOCK_SVR_ENDPOINT, CAPACITY, BUF_SIZE, SVR_MSGBUF_SIZE)
 	if err != nil {
-		logger.Fatalf("fatal error creating api server: %v", err)
+		logger.Fatal("fatal error creating api server: %v", zap.Error(err))
 	}
 
 	// create http server struct
-	httpSvr, err := NewRestSvr(logger, REST_SVR_ENDPOINT, dbc)
+	httpSvr, err := NewHttpSvr(logger, REST_SVR_ENDPOINT, dbc)
 	if err != nil {
-		logger.Fatalf("fatal error creating REST api server: %v", err)
+		logger.Fatal("fatal error creating REST api server: %v", zap.Error(err))
 	}
 
 	// start the servers listening
@@ -71,14 +80,33 @@ func main() {
 	go httpSvr.Run()
 
 	// create the 'relay' struct, start the intake of the messages
-	relay, err := NewRelay(logger, devSvr, wsSvr, dbc)
+	subHandler, err := NewSubscriptionHandler(logger, devSvr, wsSvr, dbc)
 	if err != nil {
-		logger.Fatalf("fatal error creating relay struct: %v", err)
+		logger.Fatal("fatal error creating relay struct: %v", zap.Error(err))
 	}
 
-	// this is the main program loop
-	err = relay.IntakeMessages()
+	// create the 'relay' struct, start the intake of the messages. Inject the publish function into the handler struct
+	msgHandler, err := NewMessageHandler(logger, devSvr, wsSvr, dbc, subHandler.Publish)
 	if err != nil {
-		logger.Fatalf("fatal error in IntakeMessages(): %v", err)
+		logger.Fatal("fatal error creating relay struct: %v", zap.Error(err))
+	}
+
+	// handle messages
+	go func() {
+		err = msgHandler.MsgIntake()
+		if err != nil {
+			logger.Fatal("fatal error in MessageHandler(): %v", zap.Error(err))
+		}
+	}()
+
+	// handle subscriptions
+	go func() {
+		err = subHandler.SubIntake()
+		if err != nil {
+			logger.Fatal("fatal error in SubsciptionHandler(): %v", zap.Error(err))
+		}
+	}()
+
+	for {
 	}
 }

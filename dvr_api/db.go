@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,46 +14,32 @@ import (
 
 // connection to the mongodb instance
 type DBConnection struct {
-	logger     *zap.SugaredLogger
-	client     *mongo.Client // connection to the db
-	uri        string        // endpoint
-	db         string        // name of the database inside mongo
-	deviceColl string        // name of the collection we use to store device info
-	lock       sync.Mutex    // lock for the db connection
+	logger *zap.Logger
+	client *mongo.Client // connection to the db
+	uri    string        // endpoint
+	dbName string        // name of the database inside mongo
+	lock   sync.Mutex    // lock for the db connection
 }
 
 // constructor
-func NewDBConnection(logger *zap.SugaredLogger, uri string) (*DBConnection, error) {
+func NewDBConnection(logger *zap.Logger, uri string, dbName string) (*DBConnection, error) {
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
 	var result bson.M
 	// ping db to check the connection
-	err = client.Database("admin").RunCommand(context.TODO(), bson.D{{"ping", 1}}).Decode(&result)
+	err = client.Database(dbName).RunCommand(context.TODO(), bson.D{{"ping", 1}}).Decode(&result)
 	if err != nil {
 		return nil, err
 	}
+	logger.Info("database %v connected successfully", zap.String("dbName", dbName))
 	return &DBConnection{
-		logger:     logger,
-		client:     client,
-		uri:        uri,
-		db:         "dvr_api-GPS_DB",
-		deviceColl: "devices",
+		logger: logger,
+		client: client,
+		uri:    uri,
+		dbName: dbName,
 	}, nil
-}
-
-// Device schema for modelling in mongodb
-type Device_Schema struct {
-	DeviceId   string                 `bson:"device_id"`
-	MsgHistory []DeviceMessage_Schema `bson:"msg_history"`
-}
-
-// Device message schema for modelling in mongodb
-type DeviceMessage_Schema struct {
-	RecvdTime  time.Time `bson:"received_time"`
-	PacketTime time.Time `bson:"packet_time"`
-	Message    string    `bson:"message"`
 }
 
 // insert a record into the database
@@ -69,7 +56,7 @@ func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateRe
 	}()
 
 	// might be worth storing this to avoid redeclaration upon each function call
-	coll := dbc.client.Database(dbc.db).Collection(dbc.deviceColl)
+	coll := dbc.client.Database(dbc.dbName).Collection("devices")
 
 	// parse the time in the packet
 	packetTime, err := getDateFromMessage(msg.message)
@@ -85,7 +72,7 @@ func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateRe
 	}
 
 	// Update the document for the device, adding the new message to the messages array
-	filter := bson.M{"DeviceId": msg.id}
+	filter := bson.M{"DeviceId": msg.clientId}
 	update := bson.M{
 		"$push": bson.M{
 			"MsgHistory": newMessage,
@@ -102,6 +89,40 @@ func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateRe
 	return updateResult, nil
 }
 
-// func (dbc *DBConnection) QueryMsgHistory(devices []string, after string, before string) (*bson.M, error) {
+func (dbc *DBConnection) QueryMsgHistory(devices []string, before time.Time, after time.Time) ([]bson.M, error) {
+	// might be worth storing this to avoid redeclaration upon each function call
+	coll := dbc.client.Database(dbc.dbName).Collection("devices")
 
-// }
+	// query filter. Device id in devices, and packet_time between the two dates passed
+	filter := bson.D{
+		{"DeviceId", bson.D{
+			{"$in", devices},
+		}},
+		{"MsgHistory", bson.D{
+			{"$elemMatch", bson.D{
+				{"packet_time", bson.D{
+					{"$gte", after},
+					{"$lt", before},
+				}},
+			}},
+		}},
+	}
+
+	// query using above
+	cursor, err := coll.Find(context.Background(), filter)
+	if err != nil {
+		return nil, fmt.Errorf("error querying database: %v", err)
+	}
+
+	// iterate over the cursor returned and return docuements that match the query
+	var documents []bson.M
+	for cursor.Next(context.Background()) {
+		var result bson.M
+		err := cursor.Decode(&result)
+		if err != nil {
+			panic(err)
+		}
+		documents = append(documents, result)
+	}
+	return documents, nil
+}

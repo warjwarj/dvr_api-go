@@ -8,7 +8,7 @@ import (
 )
 
 type DeviceSvr struct {
-	logger         *zap.SugaredLogger
+	logger         *zap.Logger
 	endpoint       string               // IP + port, ex: "192.168.1.77:9047"
 	capacity       int                  // num of connections
 	sockOpBufSize  int                  // how much memory do we give each connection to perform send/recv operations
@@ -18,7 +18,7 @@ type DeviceSvr struct {
 	connIndex      Dictionary[net.Conn] // index the connection objects against the ids of the devices represented thusly
 }
 
-func NewDeviceSvr(logger *zap.SugaredLogger, endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*DeviceSvr, error) {
+func NewDeviceSvr(logger *zap.Logger, endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*DeviceSvr, error) {
 	// holder struct
 	svr := DeviceSvr{
 		logger,
@@ -57,21 +57,21 @@ func (s *DeviceSvr) Init() error {
 func (s *DeviceSvr) Run() {
 	ln, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		s.logger.Fatalf("error listening on %v: %v", s.endpoint, err)
+		s.logger.Fatal("error listening on %v: %v", zap.String("endpoint", s.endpoint), zap.Error(err))
 	} else {
-		s.logger.Infof("device server listening on: %v", s.endpoint)
+		s.logger.Info("device server listening on: %v", zap.String("endpoint", s.endpoint))
 	}
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			s.logger.Infof("error accepting websocket connection: %v", err)
+			s.logger.Info("error accepting websocket connection: %v", zap.Error(err))
 			continue
 		}
-		s.logger.Debug("connection accepted on device svr...")
+		s.logger.Info("connection accepted on device svr...")
 		go func() {
 			err := s.connHandler(c)
 			if err != nil {
-				s.logger.Errorf("error in device connection loop: %v", err)
+				s.logger.Error("error in device connection loop: %v", zap.Error(err))
 			}
 			c.Close()
 		}()
@@ -84,7 +84,7 @@ func (s *DeviceSvr) connHandler(conn net.Conn) error {
 	// get buffer for read operations
 	buf, err := s.sockOpBufStack.Pop()
 	if err != nil {
-		s.logger.Error("error retreiving buffer from stack: %v", err)
+		s.logger.Error("error retreiving buffer from stack: %v", zap.Error(err))
 	}
 
 	// loop variables
@@ -121,7 +121,7 @@ func (s *DeviceSvr) connHandler(conn net.Conn) error {
 		if id == "" {
 			err = getIdFromMessage(&msg, &id)
 			if err != nil {
-				s.logger.Debugf("")
+				s.logger.Debug("error getting id from msg %v", zap.String("msg", msg))
 				continue
 			}
 			s.connIndex.Add(id, conn)

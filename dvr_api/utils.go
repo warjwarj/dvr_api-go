@@ -113,18 +113,25 @@ MDVR PROTOCOL HELPERS
 */
 
 // assuming the datetime is always at the fourth index
-// Assumptions: date is at the fith index of the message, and that the date is formatted like: 20060102-150405
+// Assumption: that the date is formatted like: 20060102-150405
 func getDateFromMessage(message string) (time.Time, error) {
-	dtStr := strings.Split(message, ";")[4]
-	if len(dtStr) != 15 {
-		return time.Time{}, fmt.Errorf("Input string length should be 15 characters")
+	msgArr := strings.Split(message, ";")
+	// loop until we find string that we can gte date from
+	for _, elem := range msgArr {
+		// a bit hacky but should work fine
+		if len(elem) == 15 && elem[8] == '-' {
+			if len(elem) != 15 {
+				return time.Time{}, fmt.Errorf("Input string length should be 15 characters")
+			}
+			// Parse the input string as a time.Time object
+			parsedTime, err := time.Parse("20060102-150405", elem)
+			if err != nil {
+				return time.Time{}, err
+			}
+			return parsedTime, nil
+		}
 	}
-	// Parse the input string as a time.Time object
-	parsedTime, err := time.Parse("20060102-150405", dtStr)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return parsedTime, nil
+	return time.Time{}, fmt.Errorf("couldn't find datetime string in: %v", message)
 }
 
 // get id from msg format: IDENTIFIER;1234;<-That's the id;xXxXxXxXxX;<CR>

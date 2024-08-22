@@ -6,18 +6,17 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"time"
 
 	"go.uber.org/zap"
 )
 
 type httpSvr struct {
-	logger   *zap.SugaredLogger
+	logger   *zap.Logger
 	endpoint string // IP + port, ex: "192.168.1.77:9047"
 	dbc      *DBConnection
 }
 
-func NewRestSvr(logger *zap.SugaredLogger, endpoint string, dbc *DBConnection) (*httpSvr, error) {
+func NewHttpSvr(logger *zap.Logger, endpoint string, dbc *DBConnection) (*httpSvr, error) {
 	// create the struct
 	svr := httpSvr{
 		logger,
@@ -27,48 +26,64 @@ func NewRestSvr(logger *zap.SugaredLogger, endpoint string, dbc *DBConnection) (
 	return &svr, nil
 }
 
-type APIReq struct {
-	Before  time.Time `bson:"before"`
-	After   time.Time `bson:"after"`
-	Devices []string  `bson:"devices"`
-}
-
 // run the server
 func (s *httpSvr) Run() {
 	// listen tcp
 	l, err := net.Listen("tcp", s.endpoint)
 	if err != nil {
-		s.logger.Fatalf("error listening on %v: %v", s.endpoint, err)
+		s.logger.Fatal("error listening on %v: %v", zap.String("endpoint", s.endpoint), zap.Error(err))
 	} else {
-		s.logger.Infof("http api server listening on: %v", s.endpoint)
+		s.logger.Info("http server listening on: %v", zap.String("endpoint", s.endpoint))
 	}
 
-	// accept http on the port open for tcp above
+	// accept http on tcp port we've just ran
 	httpSvr := &http.Server{
 		Handler: s,
 	}
 	err = httpSvr.Serve(l)
 	if err != nil {
-		s.logger.Fatalf("error serving http api server: %v", err)
+		s.logger.Fatal("error serving http api server: %v", zap.Error(err))
 	}
 }
 
 // serve the http API
 func (s *httpSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	// Reading the request body
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		s.logger.Errorf("Unable to read request body", http.StatusBadRequest)
+	// error handling
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	var req APIReq
-	json.Unmarshal(body, &req)
+	// read the bytes
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		s.logger.Error("Unable to read request body", zap.Error(err))
+		return
+	}
+	fmt.Println(string(body))
 
-	fmt.Println(req.After)
-	fmt.Println(req.Before)
-	fmt.Println(req.Devices)
+	// unmarshal bytes into a struct we can work with
+	var req API_Request
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		s.logger.Warn("failed to unmarshal json: \n%v", zap.String("incorrectJson", string(body)))
+	}
 
-	//res, err = s.dbc.QueryMsgHistory()
+	// query the database
+	res, err := s.dbc.QueryMsgHistory(req.Devices, req.Before, req.After)
+	if err != nil {
+		s.logger.Error("failed to query msg history: %v", zap.Error(err))
+	}
+
+	// marshal back into json
+	bytes, err := json.Marshal(res)
+	if err != nil {
+		s.logger.Error("failed to marshal golang struct into json bytes: %v", zap.Error(err))
+		return
+	}
+
+	// set the response header Content-Type to application/json
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(bytes)
 }

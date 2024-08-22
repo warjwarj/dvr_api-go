@@ -9,7 +9,7 @@ import (
 
 // test the new db connection
 func TestDatabaseConnection(t *testing.T) {
-	dbc, err := NewDBConnection(nil, MONGODB_ENDPOINT)
+	dbc, err := NewDBConnection(nil, MONGODB_ENDPOINT, "dvr_api-GPS-DB")
 	if err != nil {
 		t.Fatalf("NewDBConnection(uri) directly returned error: %v", err)
 	}
