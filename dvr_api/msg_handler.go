@@ -89,6 +89,12 @@ func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *Message) error {
 		return fmt.Errorf("error writing to device connection: %v", err)
 	}
 
+	// record message in database
+	_, err = mh.dbc.RecordMessage_ToFromDevice(false, msgWrap) // MatchedCount, ModifiedCount, UpsertedCount
+	if err != nil {
+		return fmt.Errorf("error recording message in db: %v", err)
+	}
+
 	// no err
 	return nil
 }
@@ -97,7 +103,7 @@ func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *Message) error {
 func (mh *MessageHandler) ProcessMsg_Device(msgWrap *Message) error {
 
 	// record message in database
-	_, err := mh.dbc.RecordMessage_FromDevice(msgWrap) // MatchedCount, ModifiedCount, UpsertedCount
+	_, err := mh.dbc.RecordMessage_ToFromDevice(true, msgWrap) // MatchedCount, ModifiedCount, UpsertedCount
 	if err != nil {
 		return fmt.Errorf("error recording message in db: %v", err)
 	}

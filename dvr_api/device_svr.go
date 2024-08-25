@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -34,7 +35,7 @@ func NewDeviceSvr(logger *zap.Logger, endpoint string, capacity int, bufSize int
 	svr.sockOpBufStack.Init()
 
 	// init the Dictionary
-	svr.connIndex.Init()
+	svr.connIndex.Init(capacity)
 
 	// create and store the buffers
 	for i := 0; i < svr.capacity; i++ {
@@ -129,6 +130,6 @@ func (s *DeviceSvr) connHandler(conn net.Conn) error {
 		}
 
 		// send the messages to the relay
-		s.svrMsgBufChan <- Message{msg, &id}
+		s.svrMsgBufChan <- Message{msg, &id, time.Now()}
 	}
 }

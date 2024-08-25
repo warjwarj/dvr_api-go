@@ -2,7 +2,6 @@
 
 TODO:
 
- - do the db
 
 */
 
@@ -48,7 +47,6 @@ func main() {
 		logger = tmp
 	}
 	defer logger.Sync() // flushes buffer, if any
-	defer logger.Sync() // flushes buffer, if any
 
 	// create DB connection
 	dbc, err := NewDBConnection(logger, MONGODB_ENDPOINT, "dvr_api-GPS-DB")
@@ -63,7 +61,7 @@ func main() {
 	}
 
 	// create ws server struct
-	wsSvr, err := NewWebSockSvr(logger, WEBSOCK_SVR_ENDPOINT, CAPACITY, BUF_SIZE, SVR_MSGBUF_SIZE)
+	wsSvr, err := NewWebSockSvr(logger, WEBSOCK_SVR_ENDPOINT, CAPACITY, BUF_SIZE, SVR_MSGBUF_SIZE, devSvr.connIndex.GetAllKeys)
 	if err != nil {
 		logger.Fatal("fatal error creating api server: %v", zap.Error(err))
 	}
@@ -100,13 +98,8 @@ func main() {
 	}()
 
 	// handle subscriptions
-	go func() {
-		err = subHandler.SubIntake()
-		if err != nil {
-			logger.Fatal("fatal error in SubsciptionHandler(): %v", zap.Error(err))
-		}
-	}()
-
-	for {
+	err = subHandler.SubIntake()
+	if err != nil {
+		logger.Fatal("fatal error in SubsciptionHandler(): %v", zap.Error(err))
 	}
 }

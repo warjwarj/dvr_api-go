@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -60,10 +59,9 @@ func (s *httpSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("Unable to read request body", zap.Error(err))
 		return
 	}
-	fmt.Println(string(body))
 
 	// unmarshal bytes into a struct we can work with
-	var req API_Request
+	var req ApiRequest_HTTP
 	err = json.Unmarshal(body, &req)
 	if err != nil {
 		s.logger.Warn("failed to unmarshal json: \n%v", zap.String("body", string(body)))

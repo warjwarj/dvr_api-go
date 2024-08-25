@@ -43,7 +43,16 @@ func NewDBConnection(logger *zap.Logger, uri string, dbName string) (*DBConnecti
 }
 
 // insert a record into the database
-func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateResult, error) {
+func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *Message) (*mongo.UpdateResult, error) {
+
+	// record direction
+	var directionDescriptor string
+	switch fromDevice {
+	case true:
+		directionDescriptor = "to"
+	case false:
+		directionDescriptor = "from"
+	}
 
 	// timeout, threadsafety
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -66,9 +75,10 @@ func (dbc *DBConnection) RecordMessage_FromDevice(msg *Message) (*mongo.UpdateRe
 
 	// Create a new message
 	newMessage := DeviceMessage_Schema{
-		RecvdTime:  time.Now(),
+		RecvdTime:  msg.recvdTime,
 		PacketTime: packetTime,
 		Message:    msg.message,
+		Direction:  directionDescriptor,
 	}
 
 	// Update the document for the device, adding the new message to the messages array
@@ -108,8 +118,8 @@ func (dbc *DBConnection) QueryMsgHistory(devices []string, before time.Time, aft
 		}},
 	}
 
-	// query using above
-	cursor, err := coll.Find(context.Background(), filter)
+	// query using above. Exclude _id field
+	cursor, err := coll.Find(context.Background(), filter, options.Find().SetProjection(bson.M{"_id": 0}))
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %v", err)
 	}

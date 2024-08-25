@@ -123,7 +123,7 @@ func TestSize(t *testing.T) {
 // Test adding and retrieving values
 func TestDictionary_AddAndGet(t *testing.T) {
 	dict := &Dictionary[string]{}
-	dict.Init()
+	dict.Init(5)
 
 	dict.Add("name", "John")
 	dict.Delete("name")
@@ -136,7 +136,7 @@ func TestDictionary_AddAndGet(t *testing.T) {
 // Test deleting values
 func TestDictionary_Delete(t *testing.T) {
 	dict := Dictionary[string]{}
-	dict.Init()
+	dict.Init(5)
 
 	dict.Add("name", "John")
 	dict.Delete("name")

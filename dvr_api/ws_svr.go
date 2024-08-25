@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -12,18 +13,19 @@ import (
 )
 
 type WebSockSvr struct {
-	logger           *zap.Logger
-	endpoint         string         // IP + port, ex: "192.168.1.77:9047"
-	capacity         int            // num of connections
-	sockOpBufSize    int            // how much memory do we give each connection to perform send/recv operations
-	sockOpBufStack   Stack[*[]byte] // memory region we give each conn to so send/recv
-	svrMsgBufSize    int            // how many messages can we queue on the server at once
-	svrMsgBufChan    chan Message   // the channel we use to queue the messages
-	svrSubReqBufChan chan SubscriptionRequest
-	connIndex        Dictionary[websocket.Conn] // index the connection objects against the ids of the clients represented thusly
+	logger              *zap.Logger
+	endpoint            string                     // IP + port, ex: "192.168.1.77:9047"
+	capacity            int                        // num of connections
+	sockOpBufSize       int                        // how much memory do we give each connection to perform send/recv operations
+	sockOpBufStack      Stack[*[]byte]             // memory region we give each conn to so send/recv
+	svrMsgBufSize       int                        // how many messages can we queue on the server at once
+	svrMsgBufChan       chan Message               // chahnel we use to queue messages
+	svrSubReqBufChan    chan SubscriptionRequest   // channel we use to queue subscription requests
+	connIndex           Dictionary[websocket.Conn] // index the connection objects against the ids of the clients represented thusly
+	getConnectedDevices func() []string            // function to retreive an index of connected devices
 }
 
-func NewWebSockSvr(logger *zap.Logger, endpoint string, capacity int, bufSize int, svrMsgBufSize int) (*WebSockSvr, error) {
+func NewWebSockSvr(logger *zap.Logger, endpoint string, capacity int, bufSize int, svrMsgBufSize int, getConnectedDevices func() []string) (*WebSockSvr, error) {
 	// create the struct
 	svr := WebSockSvr{
 		logger,
@@ -34,11 +36,12 @@ func NewWebSockSvr(logger *zap.Logger, endpoint string, capacity int, bufSize in
 		svrMsgBufSize,
 		make(chan Message),
 		make(chan SubscriptionRequest),
-		Dictionary[websocket.Conn]{}}
+		Dictionary[websocket.Conn]{},
+		getConnectedDevices}
 
 	// init things that need initing
 	svr.sockOpBufStack.Init()
-	svr.connIndex.Init()
+	svr.connIndex.Init(capacity)
 
 	// create and store the buffers
 	for i := 0; i < svr.capacity; i++ {
@@ -124,7 +127,7 @@ func (s *WebSockSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 
 	// msg = reusable holder for string, gen id as an arbitrary number
-	var msg JsonWSMessage
+	var msg ApiReq_WS
 	var id string = uuid.New().String()
 	var subscriptions []string
 
@@ -142,6 +145,10 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 			return nil
 		}
 
+		if msg.GetConnectedDevices {
+			wsjson.Write(context.TODO(), conn, ApiRes_ConnectedDevicesList_WS{s.getConnectedDevices()})
+		}
+
 		// register the subscription request
 		s.svrSubReqBufChan <- SubscriptionRequest{clientId: &id, newDevlist: msg.Subscriptions, oldDevlist: subscriptions}
 		subscriptions = make([]string, len(msg.Subscriptions))
@@ -149,50 +156,7 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 
 		// todo pass the array instead of the induvidual message
 		for _, val := range msg.Messages {
-			s.svrMsgBufChan <- Message{val, &id}
+			s.svrMsgBufChan <- Message{val, &id, time.Now()}
 		}
 	}
 }
-
-// // handle each connection
-// func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
-
-// 	// msg = reusable holder for string, gen id as an arbitrary number
-// 	var msg string
-// 	var id string = uuid.New().String()
-
-// 	// add to connection index, defer the removal from the connection index
-// 	s.connIndex.Add(id, *conn)
-// 	defer s.connIndex.Delete(id)
-
-// 	// connection loop
-// 	for {
-// 		// read one websocket message frame
-// 		wsMsgType, buf, err := conn.Read(context.Background())
-
-// 		// if the above read operation errors then conn is closed.
-// 		if err != nil {
-// 			// don't realistically need to know why but might be useful for debug.
-// 			s.logger.Debugf("websocket connection closed, status: %v", websocket.CloseStatus(err).String())
-// 			return nil
-// 		}
-
-// 		// message should only be text
-// 		if wsMsgType != websocket.MessageText {
-// 			return fmt.Errorf("received non-text websocket message - closing conn")
-// 		}
-
-// 		// build message with the new data sent
-// 		msg += string(buf)
-
-// 		// check if it is a whole message
-// 		if buf[len(buf)-1] != '\r' && buf[len(buf)-1] != '\n' {
-// 			continue
-// 		}
-
-// 		// send message to relay and reset for next message
-// 		s.svrMsgBufChan <- Message{msg, &id}
-// 		msg = ""
-// 	}
-// 	return nil
-// }

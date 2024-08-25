@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"go.uber.org/zap"
-	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 // record and index connected devices and clients
@@ -38,25 +37,21 @@ func NewSubscriptionHandler(logger *zap.Logger, devices *DeviceSvr, clients *Web
 func (sh *SubscriptionHandler) SubIntake() error {
 	// handle messages, main program loop
 	for i := 0; ; i++ {
-		select {
 		// process one message received from the API server
-		case subReq, ok := <-sh.clients.svrSubReqBufChan:
-			if ok {
-				err := sh.Subscribe(&subReq)
-				if err != nil {
-					sh.logger.Error("error processing subscription request: %v", zap.Error(err))
-				}
-			} else {
-				sh.logger.Error("Couldn't receive value from svrSubReqBufChan")
+		subReq, ok := <-sh.clients.svrSubReqBufChan
+		if ok {
+			err := sh.Subscribe(&subReq)
+			if err != nil {
+				sh.logger.Error("error processing subscription request: %v", zap.Error(err))
 			}
+		} else {
+			sh.logger.Error("Couldn't receive value from svrSubReqBufChan")
 		}
 	}
 }
 
 // add the subscription requester's connection onto the list of subscribers for each device
 func (sh *SubscriptionHandler) Subscribe(subReq *SubscriptionRequest) error {
-	fmt.Println(subReq.oldDevlist)
-	fmt.Println(subReq.newDevlist)
 	// delete old subs
 	for _, val := range subReq.oldDevlist {
 		// if the map that holds subs isn't inited then just continue
@@ -92,8 +87,10 @@ func (sh *SubscriptionHandler) Publish(msgWrap *Message) error {
 			delete(sh.subscriptions[*msgWrap.clientId], k)
 			continue
 		}
+		packTime, err := getDateFromMessage(msgWrap.message)
+		devMsg := &DeviceMessage_Schema{msgWrap.recvdTime, packTime, msgWrap.message, "from"}
 		// send message to this subscriber
-		err := conn.Write(context.TODO(), websocket.MessageText, []byte(msgWrap.message))
+		err = wsjson.Write(context.TODO(), conn, devMsg)
 		if err != nil {
 			delete(sh.subscriptions[*msgWrap.clientId], k)
 			sh.logger.Debug("removed subscriber %v from subscription list because a write operation failed", zap.String("k", k))

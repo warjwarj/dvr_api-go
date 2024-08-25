@@ -80,8 +80,8 @@ type Dictionary[T any] struct {
 	lock     sync.Mutex
 }
 
-func (d *Dictionary[T]) Init() {
-	d.internal = make(map[string]*T)
+func (d *Dictionary[T]) Init(capacity int) {
+	d.internal = make(map[string]*T, capacity)
 }
 
 // Function to add a key-value pair to the dictionary
@@ -97,6 +97,17 @@ func (d *Dictionary[T]) Get(key string) (*T, bool) {
 	defer d.lock.Unlock()
 	value, exists := d.internal[key]
 	return value, exists
+}
+
+// Function to get a value from the dictionary by key
+func (d *Dictionary[T]) GetAllKeys() []string {
+	keys := make([]string, len(d.internal))
+	i := 0
+	for k := range d.internal {
+		keys[i] = k
+		i++
+	}
+	return keys
 }
 
 // Function to delete a key-value pair from the dictionary
