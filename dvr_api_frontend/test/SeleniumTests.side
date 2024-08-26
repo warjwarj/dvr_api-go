@@ -1,0 +1,178 @@
+{
+  "id": "7f05105f-b7cc-4a54-b0da-61837cce3ecd",
+  "version": "2.0",
+  "name": "dvr_api_frontend Interface Tests",
+  "url": "http://localhost:3000",
+  "tests": [{
+    "id": "a6de43a8-862c-41e1-a684-de0619166f41",
+    "name": "Vidreq DT Input Changes Command",
+    "commands": [{
+      "id": "306d62ff-22de-4061-9c5d-45800c1ef897",
+      "comment": "",
+      "command": "open",
+      "target": "/devices",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "db493b95-3db6-4375-98c9-b1fd10964171",
+      "comment": "",
+      "command": "setWindowSize",
+      "target": "976x1040",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "cfa8ad15-01b4-441c-b0bb-612a95b8023f",
+      "comment": "",
+      "command": "click",
+      "target": "css=.false",
+      "targets": [
+        ["css=.false", "css:finder"],
+        ["xpath=//div[@id='root']/div/main/div/div/div/li[2]", "xpath:idRelative"],
+        ["xpath=//li[2]", "xpath:position"],
+        ["xpath=//li[contains(.,'Video Request')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "8bf9efde-c8d8-4e8f-bbf1-920f7118836f",
+      "comment": "",
+      "command": "type",
+      "target": "id=vidreq-datetime-input",
+      "targets": [
+        ["id=vidreq-datetime-input", "id"],
+        ["css=#vidreq-datetime-input", "css:finder"],
+        ["xpath=//input[@id='vidreq-datetime-input']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/div/div/div[2]/div/input", "xpath:idRelative"],
+        ["xpath=//input", "xpath:position"]
+      ],
+      "value": "66666-06-04T06:06"
+    }, {
+      "id": "2427dc7e-d23c-4a7d-bf31-1d6fb3f3d496",
+      "comment": "",
+      "command": "assertNotText",
+      "target": "id=send-message-input",
+      "targets": [
+        ["id=send-message-input", "id"],
+        ["css=#send-message-input", "css:finder"],
+        ["xpath=//input[@id='send-message-input']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/div/input", "xpath:idRelative"],
+        ["xpath=//main/div/input", "xpath:position"]
+      ],
+      "value": "$VIDEO;0;all;0;0;0"
+    }]
+  }, {
+    "id": "46aa34da-34cd-4a43-845a-5829d4e28616",
+    "name": "Vidreq Len Input Changes Command",
+    "commands": [{
+      "id": "86e04a9b-c852-4deb-9e62-6321cac02757",
+      "comment": "",
+      "command": "open",
+      "target": "/devices",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "596d1155-8349-41ff-ad01-3a293027553a",
+      "comment": "",
+      "command": "setWindowSize",
+      "target": "976x1040",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "bc387ca1-484d-468c-973f-7dfddf749dc4",
+      "comment": "",
+      "command": "click",
+      "target": "css=.false",
+      "targets": [
+        ["css=.false", "css:finder"],
+        ["xpath=//div[@id='root']/div/main/div/div/div/li[2]", "xpath:idRelative"],
+        ["xpath=//li[2]", "xpath:position"],
+        ["xpath=//li[contains(.,'Video Request')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "9fbc15d1-e53b-45b4-8aaa-56c08b55d405",
+      "comment": "",
+      "command": "type",
+      "target": "id=vidreq-length-input",
+      "targets": [
+        ["id=vidreq-length-input", "id"],
+        ["css=#vidreq-length-input", "css:finder"],
+        ["xpath=//input[@id='vidreq-length-input']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/div/div/div[2]/div/input[2]", "xpath:idRelative"],
+        ["xpath=//input[2]", "xpath:position"]
+      ],
+      "value": "5"
+    }, {
+      "id": "0eb540ad-b379-41d3-a1cf-65c0d60e06f2",
+      "comment": "",
+      "command": "assertNotText",
+      "target": "id=send-message-input",
+      "targets": [
+        ["id=send-message-input", "id"],
+        ["css=#send-message-input", "css:finder"],
+        ["xpath=//input[@id='send-message-input']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/div/input", "xpath:idRelative"],
+        ["xpath=//main/div/input", "xpath:position"]
+      ],
+      "value": "$VIDEO;0;all;0;0;0"
+    }]
+  }, {
+    "id": "94ddecac-0522-471a-8afb-de0da0e85d0b",
+    "name": "Vidreq Chan Input Changes Command",
+    "commands": [{
+      "id": "cead9fec-707c-4f79-aaba-4589d3f4accb",
+      "comment": "",
+      "command": "open",
+      "target": "/devices",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "51d52d08-6fef-4b9f-bb72-c1819f421866",
+      "comment": "",
+      "command": "click",
+      "target": "css=.false",
+      "targets": [
+        ["css=.false", "css:finder"],
+        ["xpath=//div[@id='root']/div/main/div/div/div/li[2]", "xpath:idRelative"],
+        ["xpath=//li[2]", "xpath:position"],
+        ["xpath=//li[contains(.,'Video Request')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "9311a17f-eb6d-4201-ac14-0172362e2176",
+      "comment": "",
+      "command": "type",
+      "target": "id=vidreq-chnum-input",
+      "targets": [
+        ["id=vidreq-chnum-input", "id"],
+        ["css=#vidreq-chnum-input", "css:finder"],
+        ["xpath=//input[@id='vidreq-chnum-input']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/div/div/div[2]/div/input[3]", "xpath:idRelative"],
+        ["xpath=//input[3]", "xpath:position"]
+      ],
+      "value": "5"
+    }, {
+      "id": "36f3fac9-16a6-4275-951b-d490293983ce",
+      "comment": "",
+      "command": "assertNotText",
+      "target": "id=send-message-input",
+      "targets": [
+        ["id=send-message-input", "id"],
+        ["css=#send-message-input", "css:finder"],
+        ["xpath=//input[@id='send-message-input']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/div/input", "xpath:idRelative"],
+        ["xpath=//input", "xpath:position"]
+      ],
+      "value": "$VIDEO;0;all;0;0;0"
+    }]
+  }],
+  "suites": [{
+    "id": "12d4e3d0-1fdf-4135-822e-08eb44a83cd8",
+    "name": "Default Suite",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": []
+  }],
+  "urls": ["http://localhost:3000/"],
+  "plugins": []
+}

@@ -51,7 +51,7 @@ func (sh *SubscriptionHandler) SubIntake() error {
 }
 
 // add the subscription requester's connection onto the list of subscribers for each device
-func (sh *SubscriptionHandler) Subscribe(subReq *SubscriptionRequest) error {
+func (sh *SubscriptionHandler) Subscribe(subReq *SubReqWrapper) error {
 	// delete old subs
 	for _, val := range subReq.oldDevlist {
 		// if the map that holds subs isn't inited then just continue
@@ -73,7 +73,7 @@ func (sh *SubscriptionHandler) Subscribe(subReq *SubscriptionRequest) error {
 }
 
 // publish a message. This function works
-func (sh *SubscriptionHandler) Publish(msgWrap *Message) error {
+func (sh *SubscriptionHandler) Publish(msgWrap *MessageWrapper) error {
 	// check if there are even eny susbcribers
 	if sh.subscriptions[*msgWrap.clientId] == nil {
 		return nil

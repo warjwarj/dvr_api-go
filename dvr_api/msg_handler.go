@@ -8,7 +8,7 @@ import (
 )
 
 // this is meant for the publish function in the sub handler.
-type PublishFunction func(*Message) error
+type PublishFunction func(*MessageWrapper) error
 
 // record and index connected devices and clients
 type MessageHandler struct {
@@ -67,7 +67,7 @@ func (mh *MessageHandler) MsgIntake() error {
 }
 
 // handle one message from an api client
-func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *Message) error {
+func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *MessageWrapper) error {
 
 	// extract the device the message pertains to
 	var dev_id string
@@ -100,7 +100,7 @@ func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *Message) error {
 }
 
 // record the message in the database
-func (mh *MessageHandler) ProcessMsg_Device(msgWrap *Message) error {
+func (mh *MessageHandler) ProcessMsg_Device(msgWrap *MessageWrapper) error {
 
 	// record message in database
 	_, err := mh.dbc.RecordMessage_ToFromDevice(true, msgWrap) // MatchedCount, ModifiedCount, UpsertedCount

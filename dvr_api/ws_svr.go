@@ -19,8 +19,8 @@ type WebSockSvr struct {
 	sockOpBufSize       int                        // how much memory do we give each connection to perform send/recv operations
 	sockOpBufStack      Stack[*[]byte]             // memory region we give each conn to so send/recv
 	svrMsgBufSize       int                        // how many messages can we queue on the server at once
-	svrMsgBufChan       chan Message               // chahnel we use to queue messages
-	svrSubReqBufChan    chan SubscriptionRequest   // channel we use to queue subscription requests
+	svrMsgBufChan       chan MessageWrapper        // chahnel we use to queue messages
+	svrSubReqBufChan    chan SubReqWrapper         // channel we use to queue subscription requests
 	connIndex           Dictionary[websocket.Conn] // index the connection objects against the ids of the clients represented thusly
 	getConnectedDevices func() []string            // function to retreive an index of connected devices
 }
@@ -34,8 +34,8 @@ func NewWebSockSvr(logger *zap.Logger, endpoint string, capacity int, bufSize in
 		bufSize,
 		Stack[*[]byte]{},
 		svrMsgBufSize,
-		make(chan Message),
-		make(chan SubscriptionRequest),
+		make(chan MessageWrapper),
+		make(chan SubReqWrapper),
 		Dictionary[websocket.Conn]{},
 		getConnectedDevices}
 
@@ -145,18 +145,19 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 			return nil
 		}
 
+		// if they have send a request for the connected devices list then oblige
 		if msg.GetConnectedDevices {
-			wsjson.Write(context.TODO(), conn, ApiRes_ConnectedDevicesList_WS{s.getConnectedDevices()})
+			wsjson.Write(context.TODO(), conn, ApiRes_WS{s.getConnectedDevices()})
 		}
 
 		// register the subscription request
-		s.svrSubReqBufChan <- SubscriptionRequest{clientId: &id, newDevlist: msg.Subscriptions, oldDevlist: subscriptions}
+		s.svrSubReqBufChan <- SubReqWrapper{clientId: &id, newDevlist: msg.Subscriptions, oldDevlist: subscriptions}
 		subscriptions = make([]string, len(msg.Subscriptions))
 		copy(subscriptions, msg.Subscriptions)
 
 		// todo pass the array instead of the induvidual message
 		for _, val := range msg.Messages {
-			s.svrMsgBufChan <- Message{val, &id, time.Now()}
+			s.svrMsgBufChan <- MessageWrapper{val, &id, time.Now()}
 		}
 	}
 }

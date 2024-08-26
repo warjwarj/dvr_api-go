@@ -43,7 +43,7 @@ func NewDBConnection(logger *zap.Logger, uri string, dbName string) (*DBConnecti
 }
 
 // insert a record into the database
-func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *Message) (*mongo.UpdateResult, error) {
+func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *MessageWrapper) (*mongo.UpdateResult, error) {
 
 	// record direction
 	var directionDescriptor string

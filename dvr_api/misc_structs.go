@@ -12,12 +12,19 @@ type ApiReq_WS struct {
 }
 
 // used in ws_svr.go to send a websocket message containing all
-type ApiRes_ConnectedDevicesList_WS struct {
+type ApiRes_WS struct {
 	ConnectedDevicesList []string `json:"connectedDevicesList"`
 }
 
-// pass messages out of server into handlers
-type Message struct {
+// used in ws_svr.go - use to convey subscription requests to the handler from the server
+type SubReqWrapper struct {
+	clientId   *string
+	newDevlist []string
+	oldDevlist []string
+}
+
+// pass messages out of servers into handlers
+type MessageWrapper struct {
 	message   string    // text the tcp client sent
 	clientId  *string   // index which the message sender with in the connIndex of the server
 	recvdTime time.Time // recvd time
@@ -38,16 +45,9 @@ type DeviceMessage_Schema struct {
 	Direction  string    `bson:"direction"`
 }
 
-// time is in the ISO string format
+// struct we marshal a http request body, formatted in json, into.
 type ApiRequest_HTTP struct {
 	Devices []string  `bson:"devices"`
 	Before  time.Time `bson:"before"`
 	After   time.Time `bson:"after"`
-}
-
-// use to convey subscription requests to the handler from the server
-type SubscriptionRequest struct {
-	clientId   *string
-	newDevlist []string
-	oldDevlist []string
 }

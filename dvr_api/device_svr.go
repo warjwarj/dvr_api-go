@@ -15,7 +15,7 @@ type DeviceSvr struct {
 	sockOpBufSize  int                  // how much memory do we give each connection to perform send/recv operations
 	sockOpBufStack Stack[*[]byte]       // memory region we give each conn to so send/recv
 	svrMsgBufSize  int                  // how many messages can we queue on the server at once
-	svrMsgBufChan  chan Message         // the channel we use to queue the messages
+	svrMsgBufChan  chan MessageWrapper  // the channel we use to queue the messages
 	connIndex      Dictionary[net.Conn] // index the connection objects against the ids of the devices represented thusly
 }
 
@@ -28,7 +28,7 @@ func NewDeviceSvr(logger *zap.Logger, endpoint string, capacity int, bufSize int
 		bufSize,
 		Stack[*[]byte]{},
 		svrMsgBufSize,
-		make(chan Message),
+		make(chan MessageWrapper),
 		Dictionary[net.Conn]{}}
 
 	// init the stack we use to store the buffers
@@ -130,6 +130,6 @@ func (s *DeviceSvr) connHandler(conn net.Conn) error {
 		}
 
 		// send the messages to the relay
-		s.svrMsgBufChan <- Message{msg, &id, time.Now()}
+		s.svrMsgBufChan <- MessageWrapper{msg, &id, time.Now()}
 	}
 }
