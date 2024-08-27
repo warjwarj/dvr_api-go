@@ -2,7 +2,6 @@
 import { Button, List, Input } from 'reactstrap';
 
 import ApiSvrConnection from '../ApiSvrConnection';
-import SignalrConnection from '../SignalrConnection';
 import { getCurrentTime, formatDateTimeDVRFormat } from '../Utils';
 import { TabContent, TabButtons } from './Tabs';
 import VidReq from './VidReq';
@@ -11,7 +10,6 @@ export default function Devices() {
 
     // connections to our API server, and to the Signalr hub
     const { setReceiveCallback, apiConnection } = ApiSvrConnection;
-    const { hubConnection } = SignalrConnection
 
     // states
     const [ msgVal, setMsgVal ] = useState("")
@@ -31,31 +29,6 @@ export default function Devices() {
     ];
 
     useEffect(() => {
-        // Signalr event handlers
-        hubConnection.on("UpdateDeviceList", (data) => {
-            setDevList(data);
-            const cmdArr = msgVal.split(';');
-            const devSel = document.querySelector('#device-selector');
-            cmdArr[1] = devSel.options[devSel.selectedIndex].value;
-            setMsgVal(cmdArr.join(';'));
-        });
-        hubConnection.on("UpdateDeviceConnection", (deviceid) => {
-            const option = document.createElement("option");
-            const devSel = document.querySelector('#device-selector');
-            option.value = deviceid;
-            option.innerHTML = deviceid;
-            devSel.appendChild(option);
-            const cmdArr = msgVal.split(';');
-            cmdArr[1] = devSel.options[devSel.selectedIndex].value;
-            setMsgVal(cmdArr.join(';'));
-        });
-        hubConnection.on("UpdateDeviceDisconnection", (deviceid) => {
-            document.querySelector(`[value="${deviceid}"]`).remove();
-            const cmdArr = msgVal.split(';');
-            const devSel = document.querySelector('#device-selector');
-            cmdArr[1] = devSel.options[devSel.selectedIndex].value;
-            setMsgVal(cmdArr.join(';'));
-        });
         // API server event handlers
         setReceiveCallback((event) => {
             addMessageToLog("Incoming: " + event.data)
