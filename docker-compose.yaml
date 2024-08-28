@@ -1,15 +1,6 @@
 services:
-  postgres:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_DB: message-store
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+  mongodb:
+    image: mongo:latest  # Use the official MongoDB image from Docker Hub
+    container_name: mongodb_container  # Name of the container
     ports:
-      - 5432:5432
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
+      - "27017:27017"  # Map the MongoDB port 27017 to the host

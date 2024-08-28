@@ -1,17 +1,20 @@
-﻿// external files
+﻿// external
 import React, { useState, useEffect } from 'react';
 import { Button, List, Input } from 'reactstrap';
 
-// my files
-import ApiSvrConnection from '../WsSvrConnection';
+// js
+import WsApiConn from '../WsApiConn';
 import { getCurrentTime, formatDateTimeDVRFormat } from '../Utils';
+
+// components
 import { TabContent, TabButtons } from './Tabs';
 import VidReq from './VidReq';
+import { MsgHistoryGrid } from './MsgHistoryGrid';
 
 export default function Devices() {
 
     // connections to our API server, and to the Signalr hub
-    const { setReceiveCallback, apiConnection } = ApiSvrConnection;
+    const { setReceiveCallback, apiConnection } = WsApiConn;
 
     // states
     const [ msgVal, setMsgVal ] = useState("")
@@ -30,9 +33,15 @@ export default function Devices() {
         },
     ];
 
+    // 
     useEffect(() => {
-        setReceiveCallback((event) => {
-            console.log(JSON.parse(event.data))
+        WsApiConn.setReceiveCallback((event) => {
+            console.log(JSON.stringify(event.data, null, 4))
+        })
+        WsApiConn.connectPromise.then(() => {
+            WsApiConn.apiConnection.send(JSON.stringify({"getConnectedDevices": true}))
+        }).catch((err) => {
+            console.log(err)
         })
     });
 
@@ -66,33 +75,34 @@ export default function Devices() {
     }
 
     return (
-        <div>
-            <div className="tabs_container">
-                <TabButtons
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    tabData={tabData}
-                />
-                <TabContent 
-                    activeTab={activeTab}
-                    tabData={tabData}
-                />
-            </div>
-            <label htmlFor="device-selector">Device: </label>
-            <Input id="device-selector" type="select" className="api-message-param" onChange={handleChange} required>
-                {devList.map((id) => (
-                    <option key={id} value={id}>
-                    {id}
-                    </option>
-                ))}
-            </Input>
-            <br />
-            <Input type="text" id="send-message-input" defaultValue={msgVal}/>
-            <small>^reload the page to reset the input box.</small>
-            <br />
-            <Button id="send-message-button" onClick={sendToApiSvr} color="primary">Send</Button>
-            <br />
-            <List id="message-response-list"></List>
-        </div>
+        <MsgHistoryGrid/>
+        // <div>
+        //     <div className="tabs_container">
+        //         <TabButtons
+        //             activeTab={activeTab}
+        //             setActiveTab={setActiveTab}
+        //             tabData={tabData}
+        //         />
+        //         <TabContent 
+        //             activeTab={activeTab}
+        //             tabData={tabData}
+        //         />
+        //     </div>
+        //     <label htmlFor="device-selector">Device: </label>
+        //     <Input id="device-selector" type="select" className="api-message-param" onChange={handleChange} required>
+        //         {devList.map((id) => (
+        //             <option key={id} value={id}>
+        //             {id}
+        //             </option>
+        //         ))}
+        //     </Input>
+        //     <br />
+        //     <Input type="text" id="send-message-input" defaultValue={msgVal}/>
+        //     <small>^reload the page to reset the input box.</small>
+        //     <br />
+        //     <Button id="send-message-button" onClick={sendToApiSvr} color="primary">Send</Button>
+        //     <br />
+        //     <List id="message-response-list"></List>
+        // </div>
     );
 }

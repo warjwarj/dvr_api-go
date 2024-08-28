@@ -16,7 +16,7 @@ import (
 // Globals
 const (
 	// endopints
-	DEVICE_SVR_ENDPOINT  string = "192.168.1.77:9047"        // endpoint for dev svr
+	DEVICE_SVR_ENDPOINT  string = "127.0.0.1:9047"           // endpoint for dev svr
 	WEBSOCK_SVR_ENDPOINT string = "127.0.0.1:9046"           // endpoint for api websock svr
 	REST_SVR_ENDPOINT    string = "127.0.0.1:9045"           // endpoint for api REST svr
 	MONGODB_ENDPOINT     string = "mongodb://0.0.0.0:27017/" // database uri
