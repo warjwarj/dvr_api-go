@@ -11,7 +11,7 @@ export default class App extends Component {
         return (
             <Layout>
                 <Routes>
-                    <Route path="/devices" element={ <Devices />} />
+                    <Route path="/devices" element={<Devices />} />
                     <Route path="/" element={<Navigate to={"/devices"}/>} />
                 </Routes>
             </Layout>

@@ -1,6 +1,6 @@
-import 'dotenv/config'
 
-const URL = process.env.DVR_API_API_ENDPOINT;
+
+const API_SVR_ENDPOINT = "ws://127.0.0.1:9046"
 
 class ApiSvrConnection {
     constructor(){
@@ -8,15 +8,16 @@ class ApiSvrConnection {
         this.timeout = 1000;
     }
 
+    // set the function which is called when data is received
     setReceiveCallback = (callback) => {
         this.processReceived = callback
     }
     
+    // called when imported, in the constructor
     connect = () => {
-        this.apiConnection = new WebSocket(URL)
+        this.apiConnection = new WebSocket(API_SVR_ENDPOINT, ["dvr_api"])
         this.apiConnection.onopen = (event) => {
             console.log("WS connected to API server");
-            this.apiConnection.send("Hi server, I'm an API client!");
         }
         this.apiConnection.onmessage = (event) => {
             this.processReceived(event);

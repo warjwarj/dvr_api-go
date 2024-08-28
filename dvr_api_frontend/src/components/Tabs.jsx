@@ -1,4 +1,4 @@
-import './Tabs.css';
+import styles from './Tabs.css';
 
 function TabButtons({ tabData, activeTab, setActiveTab }) {
     return (
@@ -18,8 +18,8 @@ function TabButtons({ tabData, activeTab, setActiveTab }) {
 
 function TabContent({ tabData, activeTab }) {
     return (
-        <div className="tab_container ">
-            <div className="tab_content">
+        <div className={styles.tab_container}>
+            <div className={styles.tab_content}>
                 {tabData[activeTab].component}
             </div>
         </div>

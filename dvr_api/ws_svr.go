@@ -141,7 +141,7 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 		err := wsjson.Read(context.Background(), conn, &msg)
 		if err != nil {
 			// don't realistically need to know why but might be useful for debug.
-			s.logger.Debug("websocket connection closed, status: %v", zap.String("websocket.CloseStatus(err)", websocket.CloseStatus(err).String()))
+			s.logger.Debug("websocket connection closed, status: %v, websocket.CloseStatus: %v", zap.Error(err), zap.String("websocket.CloseStatus(err)", websocket.CloseStatus(err).String()))
 			return nil
 		}
 

@@ -1,7 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿// external files
+import React, { useState, useEffect } from 'react';
 import { Button, List, Input } from 'reactstrap';
 
-import ApiSvrConnection from '../ApiSvrConnection';
+// my files
+import ApiSvrConnection from '../WsSvrConnection';
 import { getCurrentTime, formatDateTimeDVRFormat } from '../Utils';
 import { TabContent, TabButtons } from './Tabs';
 import VidReq from './VidReq';
@@ -29,10 +31,9 @@ export default function Devices() {
     ];
 
     useEffect(() => {
-        // API server event handlers
         setReceiveCallback((event) => {
-            addMessageToLog("Incoming: " + event.data)
-        });
+            console.log(JSON.parse(event.data))
+        })
     });
 
     const addMessageToLog = (message) => {
@@ -62,7 +63,6 @@ export default function Devices() {
     const sendToApiSvr = () => {
         const message = document.querySelector("#send-message-input").value + "\r";
         addMessageToLog("Outgoing: " + message)
-        apiConnection.send(message);
     }
 
     return (
