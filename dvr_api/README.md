@@ -41,7 +41,7 @@ Will return  message history for devices in the list, where the <strong>packet t
         ]
     }
 ]
-<br><br>
+<br><br><br>
 
 <h3>WS API - Live Messaging</h3>
 
@@ -71,7 +71,7 @@ Send the following JSON fields, seperate or in the same JSON object.<br>
     "123456"
   ]
 }
-<br>
+<br><br>
 
 The "messages" field will send each message to the pertinent device, according to the 'device' field (technically defined as, having split the message into sections by the semicolons, the first section entirely made up of numbers.)<br>
 
