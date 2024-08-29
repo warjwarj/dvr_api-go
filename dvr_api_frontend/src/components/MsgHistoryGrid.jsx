@@ -1,23 +1,36 @@
 import { AgGridReact } from 'ag-grid-react';
 import "ag-grid-community/styles/ag-grid.css";
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchMsgHistory } from '../HttpApiConn';
+
+const testRequest = {
+  "after": "2023-10-03T16:45:14.000+00:00",
+  "before": "2025-10-03T16:45:14.000+00:00",
+  "devices": [
+      "123456",
+  ]
+}
 
 export function MsgHistoryGrid() {
-    // Row Data: The data to be displayed.
-    const [rowData, setRowData] = useState([
-      { make: "Tesla", model: "Model Y", price: 64950, electric: true },
-      { make: "Ford", model: "F-Series", price: 33850, electric: false },
-      { make: "Toyota", model: "Corolla", price: 29600, electric: false },
-    ]);
+
+    // Row Data: The data to be displayed. TODO - multiple devices
+    const [rowData, setRowData] = useState('');
+
+    useEffect(() => {
+      setRowData(fetchMsgHistory(testRequest).then((data) => {
+        console.log(data)
+      }))
+    }, [])
+
+    // how we organise the data
+    const columns = {
+      field: "direction",
+      field: "message",
+      field: "packet_time",
+      field: "received_time",
+    }
     
-    // Column Definitions: Defines the columns to be displayed.
-    const [colDefs, setColDefs] = useState([
-      { field: "make" },
-      { field: "model" },
-      { field: "price" },
-      { field: "electric" }
-    ]);
    
     return (
         // wrapping container with theme & size
@@ -26,8 +39,8 @@ export function MsgHistoryGrid() {
          style={{ height: 500 }} // the Data Grid will fill the size of the parent container
         >
           <AgGridReact
-              rowData={rowData}
-              columnDefs={colDefs}
+              rowData={rowData[0]["MsgHistory"]}
+              columnDefs={columns}
           />
         </div>
     )

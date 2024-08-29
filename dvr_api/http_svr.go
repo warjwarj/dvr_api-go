@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -48,9 +49,15 @@ func (s *httpSvr) Run() {
 // serve the http API
 func (s *httpSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// error handling
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	if !PROD {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	} else {
+		s.logger.Fatal("cors enabled on http server, disable in prod")
 	}
 
 	// read the bytes
@@ -66,6 +73,7 @@ func (s *httpSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.logger.Warn("failed to unmarshal json: \n%v", zap.String("body", string(body)))
 	}
+	fmt.Println(string(body))
 
 	// query the database
 	res, err := s.dbc.QueryMsgHistory(req.Devices, req.Before, req.After)

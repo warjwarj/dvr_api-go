@@ -33,11 +33,13 @@ export default function Devices() {
         },
     ];
 
-    // 
+    // do things at start of the page load
     useEffect(() => {
+        // set what we want to do with received data
         WsApiConn.setReceiveCallback((event) => {
-            console.log(JSON.stringify(event.data, null, 4))
+            console.log(event.data)
         })
+        // when the connect promise resolves send a request for the connected device list
         WsApiConn.connectPromise.then(() => {
             WsApiConn.apiConnection.send(JSON.stringify({"getConnectedDevices": true}))
         }).catch((err) => {
@@ -45,6 +47,7 @@ export default function Devices() {
         })
     });
 
+    // 
     const addMessageToLog = (message) => {
         const li = document.createElement("li");
         li.appendChild(document.createTextNode(getCurrentTime() + ": " + message));
@@ -56,6 +59,7 @@ export default function Devices() {
         }
     }
 
+    // 
     const handleChange = (event) => {
         // this is the default command
         const cmdArr = msgVal.split(';');

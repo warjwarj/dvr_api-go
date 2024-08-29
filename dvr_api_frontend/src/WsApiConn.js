@@ -2,6 +2,7 @@
 
 const API_SVR_ENDPOINT = "ws://127.0.0.1:9046"
 
+// singleton pattern for the persistent websocket 
 class ApiSvrConnection {
     constructor(){
         // asssign the promise returned by the connect function to a member

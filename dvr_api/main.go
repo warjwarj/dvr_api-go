@@ -18,7 +18,7 @@ const (
 	// endopints
 	DEVICE_SVR_ENDPOINT  string = "127.0.0.1:9047"           // endpoint for dev svr
 	WEBSOCK_SVR_ENDPOINT string = "127.0.0.1:9046"           // endpoint for api websock svr
-	REST_SVR_ENDPOINT    string = "127.0.0.1:9045"           // endpoint for api REST svr
+	HTTP_SVR_ENDPOINT    string = "127.0.0.1:9045"           // endpoint for api REST svr
 	MONGODB_ENDPOINT     string = "mongodb://0.0.0.0:27017/" // database uri
 
 	// just use this for the logger atm
@@ -67,7 +67,7 @@ func main() {
 	}
 
 	// create http server struct
-	httpSvr, err := NewHttpSvr(logger, REST_SVR_ENDPOINT, dbc)
+	httpSvr, err := NewHttpSvr(logger, HTTP_SVR_ENDPOINT, dbc)
 	if err != nil {
 		logger.Fatal("fatal error creating REST api server: %v", zap.Error(err))
 	}
