@@ -12,10 +12,9 @@ send and receive messages to and from devices, view history of messages sent to 
 
 Send JSON in an HTTP GET request to get message history according to the parameters.<br>
 
-Will return  message history for devices in the list, where the <strong>packet time</strong> of the element is between the two stated times.<br>
+Will return  message history for devices in the list, where the <strong>packet time</strong> of the element is between the two stated times.<br><br>
 
 <h4>Example HTTP GET request to get message history</h4>
-<br><br>
 {
     "after": "2023-10-03T16:45:14.000+00:00",
     "before": "2025-10-03T16:45:14.000+00:00",
@@ -32,10 +31,9 @@ Will return  message history for devices in the list, where the <strong>packet t
 
 Connect to the websocket endpoint with the subprotocol 'dvr_api'.<br>
 
-Send the following JSON fields, seperate or in the same JSON object.<br>
+Send the following JSON fields, seperate or in the same JSON object.<br><br>
 
 <h4>Example websocket API request to send, receive messages</h4>
-<br><br>
 {
   "messages": ["$VIDEO;123456;all;4;20231003-164514;5", "$VIDEO;654321;all;4;20231003-164514;5"],
   "subscriptions": ["123456", "654321"],
