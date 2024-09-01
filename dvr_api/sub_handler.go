@@ -88,9 +88,37 @@ func (sh *SubscriptionHandler) Publish(msgWrap *MessageWrapper) error {
 			continue
 		}
 		packTime, err := getDateFromMessage(msgWrap.message)
-		devMsg := &DeviceMessage_Schema{msgWrap.recvdTime, packTime, msgWrap.message, "from"}
+		devMsg := &DeviceMessage_Response{msgWrap.recvdTime, packTime, msgWrap.message, "from"}
 		// send message to this subscriber
 		err = wsjson.Write(context.TODO(), conn, devMsg)
+		if err != nil {
+			delete(sh.subscriptions[*msgWrap.clientId], k)
+			sh.logger.Debug("removed subscriber %v from subscription list because a write operation failed", zap.String("k", k))
+			continue
+		}
+	}
+	// no err
+	return nil
+}
+
+// not used
+// publish a message. O(n) where n is the number of API clients connected to the server.
+func (sh *SubscriptionHandler) PublishConnectedDevices(msgWrap *MessageWrapper) error {
+	// do this once at the start and reuse to avoid locking.
+	connectedDevices := sh.clients.connIndex.GetAllKeys()
+
+	// the json we'll send to the API clients
+	var connectedDevList ApiRes_WS = ApiRes_WS{ConnectedDevicesList: connectedDevices}
+
+	// broadcast message to subscribers
+	for _, k := range connectedDevices {
+		// get the websocket connection associated with the id stored in the sub list
+		conn, ok := sh.clients.connIndex.Get(k)
+		if !ok {
+			continue
+		}
+		// send message to this subscriber
+		err := wsjson.Write(context.TODO(), conn, connectedDevList)
 		if err != nil {
 			delete(sh.subscriptions[*msgWrap.clientId], k)
 			sh.logger.Debug("removed subscriber %v from subscription list because a write operation failed", zap.String("k", k))

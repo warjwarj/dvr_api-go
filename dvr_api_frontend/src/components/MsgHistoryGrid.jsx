@@ -1,47 +1,71 @@
 import { AgGridReact } from 'ag-grid-react';
 import "ag-grid-community/styles/ag-grid.css";
 
-import { useState, useEffect } from 'react'
+import { Button } from 'reactstrap';
+
+import { useState, useEffect, useMemo } from 'react'
 import { fetchMsgHistory } from '../HttpApiConn';
+import { formatReqForMsgHistory } from '../Utils';
 
-const testRequest = {
-  "after": "2023-10-03T16:45:14.000+00:00",
-  "before": "2025-10-03T16:45:14.000+00:00",
-  "devices": [
-      "123456",
-  ]
-}
+// columns for table. Could use it in useState
+const MsgHistoryColumnDefs = [
+  { field: "receivedTime", colId: "receivedTime" },
+  { field: "direction", colId: "direction" },
+  { field: "message", colId: "message" },
+  { field: "packetTime", colId: "packetTime" }
+]
 
-export function MsgHistoryGrid() {
+// props should expand to (device to display history of), (start time), and (end time)
+export function MsgHistoryGrid({ device, after, before }) {
 
-    // Row Data: The data to be displayed. TODO - multiple devices
-    const [rowData, setRowData] = useState('');
+    // Table Data: The data we display and the columns we organise it against.
+    const [rowData, setRowData] = useState([]);
+    const [colData, setColData] = useState(MsgHistoryColumnDefs)
 
-    useEffect(() => {
-      setRowData(fetchMsgHistory(testRequest).then((data) => {
-        console.log(data)
-      }))
-    }, [])
+    // Adjust the state while rendering. TODO - time selection
+    const [prevDevice, setPrevDevice] = useState(device)
+    const [prevAfter, setPrevAfter] = useState(after)
+    const [prevBefore, setPrevBefore] = useState(before)
 
-    // how we organise the data
-    const columns = {
-      field: "direction",
-      field: "message",
-      field: "packet_time",
-      field: "received_time",
+    // logic to update table upon rerender, if the stae has changed
+    if (device !== prevDevice) {
+      setPrevDevice(device);
+      fetchAndSetRowData()
     }
-    
-   
+
+    function formatMsgHistoryData(data){
+      const formattedData = data[0].MsgHistory.map(msg => ({ 
+        receivedTime: new Date(msg.receivedTime).toLocaleString(), 
+        packetTime: new Date(msg.packetTime).toLocaleString(),
+        direction: msg.direction,
+        message: msg.message
+      }))
+      return formattedData
+    }
+
+    // send request to API and update the table with the response
+    async function fetchAndSetRowData() {
+      try {
+        const data = await fetchMsgHistory(formatReqForMsgHistory(device, after, before));
+        setRowData(formatMsgHistoryData(data));
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+
     return (
-        // wrapping container with theme & size
-        <div
-         className="ag-theme-quartz" // applying the Data Grid theme
-         style={{ height: 500 }} // the Data Grid will fill the size of the parent container
-        >
-          <AgGridReact
-              rowData={rowData[0]["MsgHistory"]}
-              columnDefs={columns}
-          />
-        </div>
-    )
+      // wrapping container with theme & size
+      <div
+        className="ag-theme-quartz"
+        style={{ height: 500 }}
+      >
+        {/* initial value of a select option isn't technically selected for some reason */}
+        {/* <Button id="send-message-button" onClick={fetchAndSetRowData} color="secondary" size="sm">Reload table</Button> */}
+        <AgGridReact
+            rowData={rowData}
+            columnDefs={MsgHistoryColumnDefs}
+            autoSizeStrategy={{type: 'fitCellContents'}}
+        />
+      </div>
+  )
 }

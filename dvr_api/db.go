@@ -49,9 +49,9 @@ func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *Messag
 	var directionDescriptor string
 	switch fromDevice {
 	case true:
-		directionDescriptor = "to"
+		directionDescriptor = "from device"
 	case false:
-		directionDescriptor = "from"
+		directionDescriptor = "to device"
 	}
 
 	// timeout, threadsafety
@@ -110,7 +110,7 @@ func (dbc *DBConnection) QueryMsgHistory(devices []string, before time.Time, aft
 		}},
 		{"MsgHistory", bson.D{
 			{"$elemMatch", bson.D{
-				{"packet_time", bson.D{
+				{"packetTime", bson.D{
 					{"$gte", after},
 					{"$lt", before},
 				}},

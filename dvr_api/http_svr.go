@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -73,7 +72,6 @@ func (s *httpSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.logger.Warn("failed to unmarshal json: \n%v", zap.String("body", string(body)))
 	}
-	fmt.Println(string(body))
 
 	// query the database
 	res, err := s.dbc.QueryMsgHistory(req.Devices, req.Before, req.After)

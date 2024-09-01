@@ -37,12 +37,19 @@ type Device_Schema struct {
 }
 
 // Device message schema for modelling in mongodb
-// Also used for responding to API clients
 type DeviceMessage_Schema struct {
-	RecvdTime  time.Time `bson:"received_time"`
-	PacketTime time.Time `bson:"packet_time"`
+	RecvdTime  time.Time `bson:"receivedTime"`
+	PacketTime time.Time `bson:"packetTime"`
 	Message    string    `bson:"message"`
 	Direction  string    `bson:"direction"`
+}
+
+// use to represent a message we're sending to an API client
+type DeviceMessage_Response struct {
+	RecvdTime  time.Time `json:"receivedTime"`
+	PacketTime time.Time `json:"packetTime"`
+	Message    string    `json:"message"`
+	Direction  string    `json:"direction"`
 }
 
 // struct we marshal a http request body, formatted in json, into.

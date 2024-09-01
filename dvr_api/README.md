@@ -29,14 +29,14 @@ Will return  message history for devices in the list, where the <strong>packet t
             {
                 "direction": "to",
                 "message": "$VIDEO;123456;20240817-123504;pokpok\r",
-                "packet_time": "2024-08-17T12:35:04Z",
-                "received_time": "2024-08-24T20:43:21.29Z"
+                "packeTime": "2024-08-17T12:35:04Z",
+                "receivedTime": "2024-08-24T20:43:21.29Z"
             },
             {
                 "direction": "to",
                 "message": "$VIDEO;123456;20240817-123504;pokpok\r",
-                "packet_time": "2024-08-17T12:35:04Z",
-                "received_time": "2024-08-24T20:43:26.927Z"
+                "packetTime": "2024-08-17T12:35:04Z",
+                "receivedTime": "2024-08-24T20:43:26.927Z"
             },
         ]
     }
@@ -58,10 +58,10 @@ Send the following JSON fields, seperate or in the same JSON object.<br>
 
 <h4>RESPONSE - Example message forwarded from a device subscribed to</h4>
 {
-  "RecvdTime": "2024-08-26T12:17:37.2952618+01:00",
-  "PacketTime": "2024-08-17T12:35:04Z",
-  "Message": "$VIDEO;123456;20240817-123504;pokpok\r",
-  "Direction": "from"
+  "recvdTime": "2024-08-26T12:17:37.2952618+01:00",
+  "packetTime": "2024-08-17T12:35:04Z",
+  "message": "$VIDEO;123456;20240817-123504;pokpok\r",
+  "direction": "from"
 }
 <br>
 

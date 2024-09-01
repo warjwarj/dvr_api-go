@@ -44,7 +44,7 @@ func (mh *MessageHandler) MsgIntake() error {
 		case msgWrap, ok := <-mh.devices.svrMsgBufChan:
 			if ok {
 				mh.logger.Info("Processing message", zap.String("msgWrap.message", msgWrap.message), zap.String("*msgWrap.clientId", *msgWrap.clientId))
-				err := mh.ProcessMsg_Device(&msgWrap)
+				err := mh.ProcessMsgFromDevice(&msgWrap)
 				if err != nil {
 					mh.logger.Error("error processing message from device", zap.Error(err))
 				}
@@ -55,7 +55,7 @@ func (mh *MessageHandler) MsgIntake() error {
 		case msgWrap, ok := <-mh.clients.svrMsgBufChan:
 			if ok {
 				mh.logger.Info("Processing message", zap.String("msgWrap.message", msgWrap.message), zap.String("*msgWrap.clientId", *msgWrap.clientId))
-				err := mh.ProcessMsg_APIClient(&msgWrap)
+				err := mh.ProcessMsgFromApiClient(&msgWrap)
 				if err != nil {
 					mh.logger.Error("error processing message from api client", zap.Error(err))
 				}
@@ -67,7 +67,7 @@ func (mh *MessageHandler) MsgIntake() error {
 }
 
 // handle one message from an api client
-func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *MessageWrapper) error {
+func (mh *MessageHandler) ProcessMsgFromApiClient(msgWrap *MessageWrapper) error {
 
 	// extract the device the message pertains to
 	var dev_id string
@@ -100,7 +100,7 @@ func (mh *MessageHandler) ProcessMsg_APIClient(msgWrap *MessageWrapper) error {
 }
 
 // record the message in the database
-func (mh *MessageHandler) ProcessMsg_Device(msgWrap *MessageWrapper) error {
+func (mh *MessageHandler) ProcessMsgFromDevice(msgWrap *MessageWrapper) error {
 
 	// record message in database
 	_, err := mh.dbc.RecordMessage_ToFromDevice(true, msgWrap) // MatchedCount, ModifiedCount, UpsertedCount

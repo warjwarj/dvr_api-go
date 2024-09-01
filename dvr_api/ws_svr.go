@@ -126,8 +126,9 @@ func (s *WebSockSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // handle one connection.
 func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 
-	// msg = reusable holder for string, gen id as an arbitrary number
-	var msg ApiReq_WS
+	// req = reusable holder for string, gen id as an arbitrary number
+	var req ApiReq_WS
+	var res ApiRes_WS
 	var id string = uuid.New().String()
 	var subscriptions []string
 
@@ -138,7 +139,7 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 	// connection loop
 	for {
 		// read one websocket message frame as json, unmarshal into a struct
-		err := wsjson.Read(context.Background(), conn, &msg)
+		err := wsjson.Read(context.TODO(), conn, &req)
 		if err != nil {
 			// don't realistically need to know why but might be useful for debug.
 			s.logger.Debug("websocket connection closed, status: %v, websocket.CloseStatus: %v", zap.Error(err), zap.String("websocket.CloseStatus(err)", websocket.CloseStatus(err).String()))
@@ -146,18 +147,20 @@ func (s *WebSockSvr) connHandler(conn *websocket.Conn) error {
 		}
 
 		// if they have send a request for the connected devices list then oblige
-		if msg.GetConnectedDevices {
-			wsjson.Write(context.TODO(), conn, ApiRes_WS{s.getConnectedDevices()})
+		if req.GetConnectedDevices {
+			res = ApiRes_WS{s.getConnectedDevices()}
+			wsjson.Write(context.TODO(), conn, &res)
 		}
 
 		// register the subscription request
-		s.svrSubReqBufChan <- SubReqWrapper{clientId: &id, newDevlist: msg.Subscriptions, oldDevlist: subscriptions}
-		subscriptions = make([]string, len(msg.Subscriptions))
-		copy(subscriptions, msg.Subscriptions)
+		s.svrSubReqBufChan <- SubReqWrapper{clientId: &id, newDevlist: req.Subscriptions, oldDevlist: subscriptions}
+		subscriptions = make([]string, len(req.Subscriptions))
+		copy(subscriptions, req.Subscriptions)
 
 		// todo pass the array instead of the induvidual message
-		for _, val := range msg.Messages {
+		for _, val := range req.Messages {
 			s.svrMsgBufChan <- MessageWrapper{val, &id, time.Now()}
 		}
+		req = ApiReq_WS{}
 	}
 }

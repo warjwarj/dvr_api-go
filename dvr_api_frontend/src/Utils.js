@@ -24,3 +24,21 @@ export function getCurrentTime() {
 export function formatDateTimeDVRFormat(inputDateTime) {
     return inputDateTime.split('T').map(part => part.replace(/[-:]/g, '')).join('-') + "00";
 }
+
+
+// const req = {
+//     "after": "2023-10-03T16:45:14.000+00:00",
+//     "before": "2025-10-03T16:45:14.000+00:00",
+//     "devices": [
+//         "123456",
+//     ]
+// }
+
+// format the request for sending to HTTP API server
+export function formatReqForMsgHistory(device, after, before){
+    return {
+        after: after,
+        before: before,
+        devices: [device] 
+    }
+}
