@@ -34,13 +34,16 @@ export function MsgHistoryGrid({ device, after, before }) {
     }
 
     function formatMsgHistoryData(data){
+      if (data === null || data === undefined) {
+        return data
+      }
       const formattedData = data[0].MsgHistory.map(msg => ({ 
         receivedTime: new Date(msg.receivedTime).toLocaleString(), 
         packetTime: new Date(msg.packetTime).toLocaleString(),
         direction: msg.direction,
         message: msg.message
       }))
-      return formattedData
+      return formattedData.reverse() // so latest records are at the top
     }
 
     // send request to API and update the table with the response
@@ -59,7 +62,6 @@ export function MsgHistoryGrid({ device, after, before }) {
         className="ag-theme-quartz"
         style={{ height: 500 }}
       >
-        {/* initial value of a select option isn't technically selected for some reason */}
         {/* <Button id="send-message-button" onClick={fetchAndSetRowData} color="secondary" size="sm">Reload table</Button> */}
         <AgGridReact
             rowData={rowData}

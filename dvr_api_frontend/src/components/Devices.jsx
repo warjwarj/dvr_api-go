@@ -35,17 +35,19 @@ export default function Devices() {
     ];
 
     function Devices_ApiConnectionCallback(event) {
+        console.log(event)
         // parse the message we've received over the WS connection
         const payload = JSON.parse(event.data)
         // decide what to do with the packet
         if ('connectedDevicesList' in payload) {
             setDevList(payload.connectedDevicesList)
             WsApiConn.apiConnection.send(JSON.stringify({
-                "subscriptions": devList
+                "subscriptions": payload.connectedDevicesList
             }))
         }
         else if ("message" in payload) {
-            console.log(payload)
+            addMessageToLog(payload.message)
+            console.log(payload.message)
         }
     }
 
@@ -63,14 +65,14 @@ export default function Devices() {
 
     // 
     const addMessageToLog = (message) => {
-        // const li = document.createElement("li");
-        // li.appendChild(document.createTextNode(getCurrentTime() + ": " + message));
-        // const firstItem = document.getElementById("message-response-list").firstChild;
-        // if (firstItem) {
-        //     document.getElementById("message-response-list").insertBefore(li, firstItem);
-        // } else {
-        //     document.getElementById("message-response-list").appendChild(li);
-        // }
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(getCurrentTime() + ": " + message));
+        const firstItem = document.getElementById("message-response-list").firstChild;
+        if (firstItem) {
+            document.getElementById("message-response-list").insertBefore(li, firstItem);
+        } else {
+            document.getElementById("message-response-list").appendChild(li);
+        }
     }
 
     // event handler for when the selected device is changed
@@ -78,6 +80,7 @@ export default function Devices() {
         setSelectedDevice(event.target.options[event.target.selectedIndex].value) 
     };
 
+    // send the message to the API server
     const sendToApiSvr = () => {
         const message = document.querySelector("#send-message-input").value + "\r";
         WsApiConn.apiConnection.send(JSON.stringify({
@@ -107,6 +110,7 @@ export default function Devices() {
                 <h5>Configure Message</h5>
                 <label htmlFor="device-selector">Device: </label>
                 <Input id="device-selector" type="select" className="api-message-param" onChange={handleDevSelection} required>
+                    {/* initial value of a select option isn't technically selected for some reason */}
                     <option value="default">Select a device</option>
                     {devList.map((id) => (
                         <option key={id} value={id}>
