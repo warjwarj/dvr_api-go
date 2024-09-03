@@ -73,14 +73,13 @@ func (mh *MessageHandler) ProcessMsgFromApiClient(msgWrap *MessageWrapper) error
 	var dev_id string
 	err := getIdFromMessage(&msgWrap.message, &dev_id)
 	if err != nil {
-		// respond to api client saying the dev id was not formatted correctly
 		return fmt.Errorf("couldn't parse device id from %v", msgWrap.message)
 	}
 
 	// verify device connection, get the connection object
 	devConn, devConnOk := mh.devices.connIndex.Get(dev_id)
 	if !devConnOk {
-		return nil
+		return fmt.Errorf("message sent for device not connected: %v", err)
 	}
 
 	// send the requested message to the device

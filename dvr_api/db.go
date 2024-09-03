@@ -48,8 +48,10 @@ func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *Messag
 	// record direction
 	var directionDescriptor string
 	switch fromDevice {
+	// msg sent by the device
 	case true:
 		directionDescriptor = "from device"
+	// msg sent by an API client to a device
 	case false:
 		directionDescriptor = "to device"
 	}
@@ -78,8 +80,14 @@ func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *Messag
 		Direction:  directionDescriptor,
 	}
 
+	var devId string
+	err = getIdFromMessage(&msg.message, &devId)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't parse device id from message: %v", msg.message)
+	}
+
 	// Update the document for the device, adding the new message to the messages array
-	filter := bson.M{"DeviceId": msg.clientId}
+	filter := bson.M{"DeviceId": *&devId}
 	update := bson.M{
 		"$push": bson.M{
 			"MsgHistory": newMessage,
