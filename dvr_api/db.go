@@ -107,7 +107,7 @@ func (dbc *DBConnection) QueryMsgHistory(devices []string, before time.Time, aft
 		}},
 		{"MsgHistory", bson.D{
 			{"$elemMatch", bson.D{
-				{"packetTime", bson.D{
+				{"receivedTime", bson.D{
 					{"$gte", after},
 					{"$lt", before},
 				}},
