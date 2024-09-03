@@ -69,9 +69,6 @@ func (dbc *DBConnection) RecordMessage_ToFromDevice(fromDevice bool, msg *Messag
 
 	// parse the time in the packet
 	packetTime, err := getDateFromMessage(msg.message)
-	if err != nil {
-		return nil, err
-	}
 
 	// Create a new message
 	newMessage := DeviceMessage_Schema{
