@@ -10,17 +10,47 @@ import { getCurrentTime, formatDateTimeDVRFormat } from '../Utils';
 import { TabContent, TabButtons } from './Tabs';
 import VidReq from './VidReq';
 import { MsgHistoryGrid } from './MsgHistoryGrid';
+import { fetchConnectedDevices } from '../HttpApiConn';
 
 export default function Devices() {
 
-    // connections to our API server, and to the Signalr hub
-    const { setReceiveCallback, apiConnection } = WsApiConn;
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
+    // HOOKS
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // states
     const [ msgVal, setMsgVal ] = useState("")
     const [ devList, setDevList ] = useState(["Select Device"]);
     const [ selectedDevice, setSelectedDevice ] = useState("");
     const [ activeTab, setActiveTab ] = useState(0);
+
+    // PAGE LOAD - set callbacks, populate the list of connected devices, subscribe to messages
+    useEffect(() => {
+        const fetchAndSetConnectedDevices = async () => {
+            const data = await fetchConnectedDevices()
+            setDevList(data.ConnectedDevices)
+        }
+        // set what we want to do with received data
+        WsApiConn.setReceiveCallback(Devices_WsApiConnectionCallback)
+        // get the connected devices list from the server
+        fetchAndSetConnectedDevices()
+    }, []);
+
+    useEffect(() => {
+        const sendSubReq = () => {
+            // Subscribe to receive all messages from all devices connected to the server
+            apiReq.Subscriptions = [selectedDevice]
+            WsApiConn.apiConnection.send(JSON.stringify(apiReq));
+        } 
+        if (selectedDevice != null && WsApiConn.apiConnection.readyState === WebSocket.OPEN) {
+            sendSubReq()
+        }
+
+    }, [selectedDevice]);
+
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
+    // PAGE VARIABLES
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // tabs
     const tabData = [
@@ -34,36 +64,28 @@ export default function Devices() {
         },
     ];
 
-    function Devices_ApiConnectionCallback(event) {
-        console.log(event)
+    // reusable request object to keep the subscription field the same
+    const apiReq = {
+        "Messages": [],
+        "Subscriptions": []
+    }
+
+    
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
+    // CALLBACKS/EVENT HANDLERS
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    // WS API CALLBACK - fired upon every event we receive from the websocket API connection
+    const  Devices_WsApiConnectionCallback = (event) => {
         // parse the message we've received over the WS connection
         const payload = JSON.parse(event.data)
-        // decide what to do with the packet
-        if ('connectedDevicesList' in payload) {
-            setDevList(payload.connectedDevicesList)
-            WsApiConn.apiConnection.send(JSON.stringify({
-                "subscriptions": payload.connectedDevicesList
-            }))
-        }
-        else if ("message" in payload) {
-            addMessageToLog(payload.message)
-            console.log(payload.message)
+        console.log(payload)
+        if ("Message" in payload) {
+            addMessageToLog(payload.Message)
         }
     }
 
-    // do things at start of the page load
-    useEffect(() => {
-        // set what we want to do with received data
-        WsApiConn.setReceiveCallback(Devices_ApiConnectionCallback)
-        // when the connect promise resolves send a request for the connected device list
-        WsApiConn.connectPromise.then(() => {
-            WsApiConn.apiConnection.send(JSON.stringify({"getConnectedDevices": true}))
-        }).catch((err) => {
-            console.log(err)
-        })
-    }, []);
-
-    // 
+    // record a device message notification we've received from the server
     const addMessageToLog = (message) => {
         const li = document.createElement("li");
         li.appendChild(document.createTextNode(getCurrentTime() + ": " + message));
@@ -76,21 +98,23 @@ export default function Devices() {
     }
 
     // event handler for when the selected device is changed
-    const handleDevSelection = (event) => { 
-        setSelectedDevice(event.target.options[event.target.selectedIndex].value) 
+    const handleDevSelection = (event) => {
+        setSelectedDevice(event.target.options[event.target.selectedIndex].value)
     };
 
     // send the message to the API server
     const sendToApiSvr = () => {
         const message = document.querySelector("#send-message-input").value + "\r";
-        WsApiConn.apiConnection.send(JSON.stringify({
-            "messages": [message]
-        }))
+        apiReq.Messages = [message]
+        WsApiConn.apiConnection.send(JSON.stringify(apiReq))
     }
+
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
+    // JSX
+    //~~~~~~~~~~~~~~~~~~~~~~~~~
 
     return (
         <div>
-            
             {/* select type of message you want to send */}
             <div className="tabs_container">
                 <h5>Message Template</h5>
@@ -109,14 +133,18 @@ export default function Devices() {
             <div>
                 <h5>Configure Message</h5>
                 <label htmlFor="device-selector">Device: </label>
-                <Input id="device-selector" type="select" className="api-message-param" onChange={handleDevSelection} required>
+                <Input id="device-selector" type="select" className="api-message-param" onChange={handleDevSelection} value={selectedDevice} required>
                     {/* initial value of a select option isn't technically selected for some reason */}
-                    <option value="default">Select a device</option>
-                    {devList.map((id) => (
-                        <option key={id} value={id}>
-                        {id}
-                        </option>
-                    ))}
+                    <option value="">Select a device</option>
+                    {devList && devList.length > 0 ? (
+                        devList.map((id) => (
+                            <option key={id} value={id}>
+                                {id}
+                            </option>
+                        ))
+                    ) : (
+                        <option disabled>No devices are connected</option>
+                    )}
                 </Input>
                 <br />
                 <Input type="text" id="send-message-input" defaultValue={msgVal}/>
